@@ -1,0 +1,348 @@
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  runTransaction,
+  Timestamp
+} from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { LeaveRequest, LeaveFormData, LeaveStatus, User } from '../types';
+import { sendSlackNotification } from './slackService';
+
+// Convert Firestore document to LeaveRequest
+const convertLeaveDoc = (doc: any): LeaveRequest => {
+  const data = doc.data();
+  return {
+    ...data,
+    id: doc.id,
+    startDate: data.startDate?.toDate() || new Date(),
+    endDate: data.endDate?.toDate() || new Date(),
+    createdAt: data.createdAt?.toDate() || new Date(),
+    updatedAt: data.updatedAt?.toDate() || new Date()
+  } as LeaveRequest;
+};
+
+// Calculate total leave days between two dates
+export const calculateLeaveDays = (startDate: string, endDate: string, isHalfDay: boolean): number => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  let days = 0;
+  
+  const current = new Date(start);
+  while (current <= end) {
+    const dayOfWeek = current.getDay();
+    // Exclude weekends
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      days++;
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return isHalfDay ? 0.5 : days;
+};
+
+// Submit a new leave request
+export const submitLeaveRequest = async (
+  formData: LeaveFormData,
+  employee: User,
+  manager: User
+): Promise<string> => {
+  const totalDays = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
+  
+  // Validate leave balance
+  if (formData.leaveType !== 'wfh') {
+    const availableCompOff = formData.useCompOff ? employee.compOffBalance : 0;
+    const availableAnnual = formData.useAnnualLeave ? employee.annualLeaveBalance : 0;
+    
+    if (availableCompOff + availableAnnual < totalDays) {
+      throw new Error('Insufficient leave balance for the selected leave sources');
+    }
+  }
+
+  const leaveRequest: Omit<LeaveRequest, 'id'> = {
+    employeeId: employee.uid,
+    employeeName: employee.name,
+    employeeEmail: employee.email,
+    leaveType: formData.leaveType,
+    startDate: new Date(formData.startDate),
+    endDate: new Date(formData.endDate),
+    totalDays,
+    isHalfDay: formData.isHalfDay,
+    reason: formData.reason,
+    selectedSources: {
+      compOff: formData.useCompOff,
+      annualLeave: formData.useAnnualLeave
+    },
+    compOffUsed: 0,
+    annualLeaveUsed: 0,
+    managerId: formData.managerId,
+    managerName: manager.name,
+    status: 'pending_manager',
+    managerComment: '',
+    hrComment: '',
+    hrOverride: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+  const docRef = await addDoc(collection(db, 'leaves'), {
+    ...leaveRequest,
+    startDate: Timestamp.fromDate(leaveRequest.startDate),
+    endDate: Timestamp.fromDate(leaveRequest.endDate),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  // Send Slack notification
+  await sendSlackNotification({
+    employeeName: employee.name,
+    leaveType: formData.leaveType,
+    startDate: formData.startDate,
+    endDate: formData.endDate,
+    totalDays,
+    status: 'pending_manager',
+    timestamp: new Date().toISOString()
+  });
+
+  return docRef.id;
+};
+
+// Get leave requests for an employee
+export const getEmployeeLeaves = async (employeeId: string): Promise<LeaveRequest[]> => {
+  const q = query(
+    collection(db, 'leaves'),
+    where('employeeId', '==', employeeId),
+    orderBy('createdAt', 'desc')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(convertLeaveDoc);
+};
+
+// Get leave requests pending manager approval
+export const getManagerPendingLeaves = async (managerId: string): Promise<LeaveRequest[]> => {
+  const q = query(
+    collection(db, 'leaves'),
+    where('managerId', '==', managerId),
+    where('status', '==', 'pending_manager'),
+    orderBy('createdAt', 'desc')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(convertLeaveDoc);
+};
+
+// Get all leave requests pending HR approval
+export const getHRPendingLeaves = async (): Promise<LeaveRequest[]> => {
+  const q = query(
+    collection(db, 'leaves'),
+    where('status', '==', 'pending_hr'),
+    orderBy('createdAt', 'desc')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(convertLeaveDoc);
+};
+
+// Get all leave requests (for HR)
+export const getAllLeaves = async (): Promise<LeaveRequest[]> => {
+  const q = query(
+    collection(db, 'leaves'),
+    orderBy('createdAt', 'desc')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(convertLeaveDoc);
+};
+
+// Manager approval/rejection
+export const managerDecision = async (
+  leaveId: string,
+  approved: boolean,
+  comment: string,
+  managerName: string
+): Promise<void> => {
+  const leaveRef = doc(db, 'leaves', leaveId);
+  const leaveDoc = await getDoc(leaveRef);
+  
+  if (!leaveDoc.exists()) {
+    throw new Error('Leave request not found');
+  }
+
+  const leaveData = convertLeaveDoc(leaveDoc);
+  const newStatus: LeaveStatus = approved ? 'pending_hr' : 'rejected';
+
+  await updateDoc(leaveRef, {
+    status: newStatus,
+    managerComment: comment,
+    updatedAt: serverTimestamp()
+  });
+
+  // Send Slack notification
+  await sendSlackNotification({
+    employeeName: leaveData.employeeName,
+    leaveType: leaveData.leaveType,
+    startDate: leaveData.startDate.toISOString().split('T')[0],
+    endDate: leaveData.endDate.toISOString().split('T')[0],
+    totalDays: leaveData.totalDays,
+    status: newStatus,
+    managerName,
+    managerComment: comment,
+    timestamp: new Date().toISOString()
+  });
+};
+
+// HR approval with leave deduction
+export const hrApproval = async (
+  leaveId: string,
+  approved: boolean,
+  comment: string,
+  overrideCompOff?: number,
+  overrideAnnualLeave?: number
+): Promise<void> => {
+  await runTransaction(db, async (transaction) => {
+    const leaveRef = doc(db, 'leaves', leaveId);
+    const leaveDoc = await transaction.get(leaveRef);
+    
+    if (!leaveDoc.exists()) {
+      throw new Error('Leave request not found');
+    }
+
+    const leaveData = convertLeaveDoc(leaveDoc);
+    
+    if (!approved) {
+      transaction.update(leaveRef, {
+        status: 'rejected',
+        hrComment: comment,
+        updatedAt: serverTimestamp()
+      });
+      return;
+    }
+
+    // Skip deduction for WFH
+    if (leaveData.leaveType === 'wfh') {
+      transaction.update(leaveRef, {
+        status: 'approved',
+        hrComment: comment,
+        updatedAt: serverTimestamp()
+      });
+      return;
+    }
+
+    // Get employee data
+    const employeeRef = doc(db, 'users', leaveData.employeeId);
+    const employeeDoc = await transaction.get(employeeRef);
+    
+    if (!employeeDoc.exists()) {
+      throw new Error('Employee not found');
+    }
+
+    const employee = employeeDoc.data() as User;
+    let compOffUsed = 0;
+    let annualLeaveUsed = 0;
+    let remainingDays = leaveData.totalDays;
+    let hrOverride = false;
+    let hrOverrideDetails = '';
+
+    // Check if HR is overriding the leave source
+    if (overrideCompOff !== undefined || overrideAnnualLeave !== undefined) {
+      hrOverride = true;
+      compOffUsed = overrideCompOff || 0;
+      annualLeaveUsed = overrideAnnualLeave || 0;
+      hrOverrideDetails = `HR Override: Comp Off = ${compOffUsed}, Annual Leave = ${annualLeaveUsed}`;
+    } else {
+      // Standard deduction logic based on employee selection
+      if (leaveData.selectedSources.compOff && employee.compOffBalance > 0) {
+        compOffUsed = Math.min(employee.compOffBalance, remainingDays);
+        remainingDays -= compOffUsed;
+      }
+      
+      if (leaveData.selectedSources.annualLeave && remainingDays > 0) {
+        annualLeaveUsed = Math.min(employee.annualLeaveBalance, remainingDays);
+        remainingDays -= annualLeaveUsed;
+      }
+    }
+
+    // Update employee balances
+    transaction.update(employeeRef, {
+      compOffBalance: employee.compOffBalance - compOffUsed,
+      annualLeaveBalance: employee.annualLeaveBalance - annualLeaveUsed,
+      updatedAt: serverTimestamp()
+    });
+
+    // Update leave request
+    transaction.update(leaveRef, {
+      status: 'approved',
+      hrComment: comment,
+      compOffUsed,
+      annualLeaveUsed,
+      hrOverride,
+      hrOverrideDetails,
+      updatedAt: serverTimestamp()
+    });
+
+    // Send Slack notification
+    await sendSlackNotification({
+      employeeName: leaveData.employeeName,
+      leaveType: leaveData.leaveType,
+      startDate: leaveData.startDate.toISOString().split('T')[0],
+      endDate: leaveData.endDate.toISOString().split('T')[0],
+      totalDays: leaveData.totalDays,
+      status: 'approved',
+      hrComment: comment,
+      deductionDetails: `Comp Off Used: ${compOffUsed}, Annual Leave Used: ${annualLeaveUsed}${hrOverrideDetails ? ' | ' + hrOverrideDetails : ''}`,
+      timestamp: new Date().toISOString()
+    });
+  });
+};
+
+// HR cancel leave request
+export const cancelLeaveRequest = async (leaveId: string, hrComment: string): Promise<void> => {
+  await runTransaction(db, async (transaction) => {
+    const leaveRef = doc(db, 'leaves', leaveId);
+    const leaveDoc = await transaction.get(leaveRef);
+    
+    if (!leaveDoc.exists()) {
+      throw new Error('Leave request not found');
+    }
+
+    const leaveData = convertLeaveDoc(leaveDoc);
+    
+    // If leave was approved, restore the balance
+    if (leaveData.status === 'approved') {
+      const employeeRef = doc(db, 'users', leaveData.employeeId);
+      const employeeDoc = await transaction.get(employeeRef);
+      
+      if (employeeDoc.exists()) {
+        const employee = employeeDoc.data() as User;
+        transaction.update(employeeRef, {
+          compOffBalance: employee.compOffBalance + leaveData.compOffUsed,
+          annualLeaveBalance: employee.annualLeaveBalance + leaveData.annualLeaveUsed,
+          updatedAt: serverTimestamp()
+        });
+      }
+    }
+
+    transaction.update(leaveRef, {
+      status: 'cancelled',
+      hrComment,
+      updatedAt: serverTimestamp()
+    });
+  });
+};
+
+// Get a single leave request
+export const getLeaveRequest = async (leaveId: string): Promise<LeaveRequest | null> => {
+  const leaveDoc = await getDoc(doc(db, 'leaves', leaveId));
+  if (!leaveDoc.exists()) {
+    return null;
+  }
+  return convertLeaveDoc(leaveDoc);
+};

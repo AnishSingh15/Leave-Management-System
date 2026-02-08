@@ -1,0 +1,123 @@
+.leave-history .filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.leave-history .filter-group label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.leave-history .filter-group select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.leaves-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.leave-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+}
+
+.leave-card:hover {
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.leave-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+}
+
+.leave-type {
+  font-weight: 600;
+  color: #333;
+}
+
+.leave-card-body {
+  padding: 20px;
+}
+
+.leave-detail {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.detail-label {
+  width: 100px;
+  font-weight: 500;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: #333;
+}
+
+.deduction-info {
+  margin-top: 20px;
+  padding: 15px;
+  background: #e8f5e9;
+  border-radius: 8px;
+}
+
+.deduction-info h4 {
+  margin: 0 0 10px;
+  color: #2e7d32;
+  font-size: 0.9rem;
+}
+
+.deduction-details {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.deduction-details span {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.hr-override {
+  color: #f57c00 !important;
+  font-weight: 500;
+}
+
+.comment-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed #eee;
+}
+
+.comment-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.comment-text {
+  margin: 8px 0 0;
+  color: #333;
+  font-style: italic;
+}
+
+.leave-card-footer {
+  padding: 12px 20px;
+  background: #f8f9fa;
+  border-top: 1px solid #eee;
+  font-size: 0.85rem;
+  color: #666;
+}

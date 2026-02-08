@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isHRAdmin() {
+      return getUserRole() == 'hr_admin';
+    }
+    
+    function isManager() {
+      return getUserRole() == 'manager' || isHRAdmin();
+    }
+    
+    function isEmployee() {
+      return getUserRole() == 'employee' || isManager();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (needed for manager selection)
+      allow read: if isAuthenticated();
+      
+      // Users can create their own profile on registration
+      allow create: if isAuthenticated() && isOwner(userId) && 
+        request.resource.data.role == 'employee' &&
+        request.resource.data.annualLeaveBalance == 14 &&
+        request.resource.data.compOffBalance == 0;
+      
+      // Users can update their own basic info, but not role or balances
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && 
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.annualLeaveBalance == resource.data.annualLeaveBalance &&
+          request.resource.data.compOffBalance == resource.data.compOffBalance) ||
+        isHRAdmin()
+      );
+      
+      // Only HR Admin can delete users
+      allow delete: if isHRAdmin();
+    }
+
+    // Leaves collection
+    match /leaves/{leaveId} {
+      // Employees can read their own leaves
+      // Managers can read leaves assigned to them
+      // HR Admin can read all leaves
+      allow read: if isAuthenticated() && (
+        resource.data.employeeId == request.auth.uid ||
+        resource.data.managerId == request.auth.uid ||
+        isHRAdmin()
+      );
+      
+      // Anyone authenticated can create a leave request for themselves
+      allow create: if isAuthenticated() && 
+        request.resource.data.employeeId == request.auth.uid &&
+        request.resource.data.status == 'pending_manager';
+      
+      // Manager can update leaves assigned to them (approve/reject to pending_hr or rejected)
+      // HR Admin can update any leave
+      allow update: if isAuthenticated() && (
+        // Manager approval
+        (resource.data.managerId == request.auth.uid &&
+          resource.data.status == 'pending_manager' &&
+          (request.resource.data.status == 'pending_hr' || request.resource.data.status == 'rejected') &&
+          request.resource.data.managerComment != '') ||
+        // HR Admin can do anything
+        isHRAdmin()
+      );
+      
+      // Only HR Admin can delete leaves
+      allow delete: if isHRAdmin();
+    }
+
+    // Audit logs collection
+    match /auditLogs/{logId} {
+      // Only HR Admin can read audit logs
+      allow read: if isHRAdmin();
+      
+      // System can create audit logs (via Cloud Functions)
+      // HR Admin can create audit logs from client
+      allow create: if isHRAdmin();
+      
+      // No one can update or delete audit logs
+      allow update, delete: if false;
+    }
+  }
+}

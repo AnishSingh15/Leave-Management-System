@@ -1,0 +1,75 @@
+.leave-form-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.balance-summary {
+  display: flex;
+  gap: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  border-radius: 10px;
+  margin-bottom: 25px;
+}
+
+.balance-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.balance-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.balance-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.total-days-display {
+  padding: 12px 15px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.checkbox-inline {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  flex-direction: row !important;
+}
+
+.checkbox-inline label {
+  margin: 0 !important;
+}
+
+.help-text {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 5px 0 15px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 12px 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  border: 1px solid #c3e6cb;
+}

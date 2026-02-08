@@ -1,46 +1,203 @@
-# Getting Started with Create React App
+# LAMS - Leave & Attendance Management System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive web-based application for managing employee leaves, compensatory offs (Comp Off), and work-from-home (WFH) requests with multi-level approvals and Slack notifications.
+
+## 💸 100% Free Deployment
+
+| Service          | Provider         | Plan   | Cost |
+|------------------|------------------|--------|------|
+| Frontend Hosting | **Vercel**       | Hobby  | FREE |
+| Serverless API   | **Vercel**       | Hobby  | FREE |
+| Authentication   | **Firebase Auth**| Spark  | FREE |
+| Database         | **Firestore**    | Spark  | FREE |
+| Notifications    | **Slack Webhooks**| Free  | FREE |
+
+**Firebase Spark (free) limits:** 50K reads/day, 20K writes/day, 1GB storage — plenty for a team.
+**Vercel Hobby (free) limits:** 100GB bandwidth/month, serverless function invocations included.
+
+## Features
+
+- 🔐 **Authentication**: Firebase email/password auth with role-based access
+- 👤 **User Roles**: Employee, Manager, HR Admin
+- 📝 **Leave Management**: Casual, Paid, Sick, Comp Off, WFH
+- ✅ **Multi-level Approval**: Manager → HR workflow
+- 📊 **Dashboard**: Real-time leave balance tracking
+- 💼 **HR Admin Panel**: Manage users, adjust balances, audit logs
+- 🔔 **Slack Notifications**: Real-time notifications on all actions
+- 📱 **Responsive Design**: Mobile-friendly
+
+## Tech Stack
+
+- **Frontend**: React 18 + TypeScript
+- **Backend**: Firebase Spark (Auth + Firestore) — free tier
+- **Hosting**: Vercel — free tier
+- **Slack API**: Via Vercel serverless function (keeps webhook secret)
+- **Routing**: React Router v6
+
+---
+
+## 🚀 Quick Start (Local Dev)
+
+```bash
+cd lams
+npm install
+cp .env.example .env.local   # Fill in your Firebase config
+npm start
+```
+
+---
+
+## �� Firebase Setup (Free Spark Plan)
+
+### Step 1: Create Firebase Project
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com/)
+2. Click **Add project**
+3. Name it (e.g. `lams-leave-system`)
+4. Disable Google Analytics (not needed) → **Create project**
+
+### Step 2: Enable Email/Password Auth
+
+1. Go to **Build → Authentication → Get started**
+2. Click **Sign-in method** tab
+3. Enable **Email/Password** → Save
+
+### Step 3: Create Firestore Database
+
+1. Go to **Build → Firestore Database → Create database**
+2. Choose **Start in production mode**
+3. Select region closest to your users → **Enable**
+
+### Step 4: Get Firebase Config
+
+1. Go to **Project Settings** (gear icon ⚙) → **General**
+2. Scroll to **Your apps** → click Web icon `</>`
+3. Register app name (e.g. "LAMS Web")
+4. Copy the config and put in `.env.local`:
+
+```
+REACT_APP_FIREBASE_API_KEY=AIzaSy...
+REACT_APP_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=your-project-id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=123456789
+REACT_APP_FIREBASE_APP_ID=1:123456789:web:abc123
+```
+
+### Step 5: Deploy Firestore Rules & Indexes
+
+```bash
+npm install -g firebase-tools
+firebase login
+firebase use YOUR_PROJECT_ID
+firebase deploy --only firestore:rules
+firebase deploy --only firestore:indexes
+```
+
+### Step 6: Create First HR Admin
+
+1. Register a user through the app normally
+2. Go to **Firebase Console → Firestore Database**
+3. Open the `users` collection → find your user document
+4. Change `role` from `"employee"` to `"hr_admin"`
+
+---
+
+## ▲ Vercel Deployment (Free)
+
+### Step 1: Push to GitHub
+
+```bash
+git add .
+git commit -m "Initial LAMS commit"
+git remote add origin https://github.com/YOUR_USERNAME/lams.git
+git push -u origin main
+```
+
+### Step 2: Deploy on Vercel
+
+1. Go to [vercel.com](https://vercel.com) → Sign up with GitHub
+2. Click **Add New → Project**
+3. Import your `lams` repo
+4. Vercel auto-detects React — just click **Deploy**
+
+### Step 3: Add Environment Variables in Vercel
+
+Go to **Project Settings → Environment Variables** and add:
+
+| Key | Value |
+|-----|-------|
+| `REACT_APP_FIREBASE_API_KEY` | your key |
+| `REACT_APP_FIREBASE_AUTH_DOMAIN` | your-project.firebaseapp.com |
+| `REACT_APP_FIREBASE_PROJECT_ID` | your-project-id |
+| `REACT_APP_FIREBASE_STORAGE_BUCKET` | your-project.appspot.com |
+| `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | your sender id |
+| `REACT_APP_FIREBASE_APP_ID` | your app id |
+| `SLACK_WEBHOOK_URL` | https://hooks.slack.com/services/... |
+
+> **Note:** `SLACK_WEBHOOK_URL` (without `REACT_APP_` prefix) is a server-side only variable — it stays secret in the Vercel serverless function and is never exposed to the browser.
+
+### Step 4: Redeploy
+
+After adding env vars, go to **Deployments** → click **Redeploy** on the latest deployment.
+
+Your app is now live at `https://lams-xxxxx.vercel.app`! 🎉
+
+---
+
+## 🔔 Slack Setup (Optional)
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps)
+2. **Create New App → From scratch**
+3. Name: `LAMS Notifications`, select workspace
+4. Go to **Incoming Webhooks** → toggle ON
+5. **Add New Webhook to Workspace** → select `#leave-channel`
+6. Copy the webhook URL
+7. Add it in **Vercel → Project Settings → Environment Variables** as `SLACK_WEBHOOK_URL`
+
+---
+
+## 📁 Project Structure
+
+```
+lams/
+├── api/
+│   └── slack.js              # Vercel serverless function (Slack proxy)
+├── src/
+│   ├── components/
+│   │   ├── Admin/            # HR Admin panel
+│   │   ├── Approvals/        # Manager/HR approval interface
+│   │   ├── Auth/             # Login & Registration
+│   │   ├── Dashboard/        # Employee dashboard
+│   │   ├── Layout/           # Navbar & Layout wrapper
+│   │   └── Leave/            # Leave form & history
+│   ├── config/firebase.ts    # Firebase init
+│   ├── contexts/AuthContext.tsx
+│   ├── services/
+│   │   ├── leaveService.ts   # Leave CRUD + deduction logic
+│   │   ├── userService.ts    # User management + audit logs
+│   │   └── slackService.ts   # Slack notification builder
+│   ├── types/index.ts        # TypeScript interfaces
+│   └── App.tsx               # Routing & role guards
+├── firestore.rules           # Security rules
+├── firestore.indexes.json    # Composite indexes
+├── firebase.json             # Firebase config (rules only)
+├── vercel.json               # Vercel deployment config
+└── .env.example              # Env var template
+```
+
+---
 
 ## Available Scripts
 
-In the project directory, you can run:
+| Command | Description |
+|---------|-------------|
+| `npm start` | Dev server at localhost:3000 |
+| `npm run build` | Production build to `build/` |
+| `npm test` | Run tests |
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## 📝 License
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+MIT
