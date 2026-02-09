@@ -29,18 +29,6 @@ const formatStatus = (status: LeaveStatus): string => {
   return statuses[status] || status;
 };
 
-// Get status color for Slack attachment
-const getStatusColor = (status: LeaveStatus): string => {
-  const colors: Record<LeaveStatus, string> = {
-    pending_manager: '#FFA500',
-    pending_hr: '#FFA500',
-    approved: '#36A64F',
-    rejected: '#FF0000',
-    cancelled: '#808080'
-  };
-  return colors[status] || '#808080';
-};
-
 // Send Slack notification via Vercel serverless API
 export const sendSlackNotification = async (notification: SlackNotification): Promise<void> => {
   // Build a clean readable message using Slack Block Kit
