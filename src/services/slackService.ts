@@ -1,9 +1,7 @@
 import { SlackNotification, LeaveStatus, LeaveType } from '../types';
 
-// In production (Vercel): uses serverless API at /api/slack (keeps webhook secret)
-// In local dev: calls the webhook directly via REACT_APP_SLACK_WEBHOOK_URL env var
-const SLACK_API_ENDPOINT = '/api/slack';
-const LOCAL_SLACK_WEBHOOK = process.env.REACT_APP_SLACK_WEBHOOK_URL;
+// Endpoints
+const SLACK_DM_ENDPOINT = '/api/slack-dm';     // DM via Bot Token (production)
 
 // Format leave type for display
 const formatLeaveType = (type: LeaveType): string => {
@@ -101,15 +99,22 @@ export const sendSlackNotification = async (notification: SlackNotification): Pr
   };
 
   try {
-    // In local dev: call Slack webhook directly if env var is set
-    // In production (Vercel): use serverless API to keep webhook secret
-    const endpoint = LOCAL_SLACK_WEBHOOK || SLACK_API_ENDPOINT;
+    const hasTargets = notification.targetSlackIds && notification.targetSlackIds.length > 0;
 
-    await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    if (hasTargets) {
+      // Send personal DMs via Bot Token
+      await fetch(SLACK_DM_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blocks: payload.blocks,
+          targetSlackIds: notification.targetSlackIds,
+          leaveId: notification.leaveId,
+          approvalType: notification.approvalType
+        })
+      });
+    }
+    // If no target Slack IDs, notification is silently skipped (Slack IDs not set for the user)
   } catch (error) {
     console.error('Failed to send Slack notification:', error);
   }

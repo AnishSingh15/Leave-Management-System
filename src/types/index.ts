@@ -80,7 +80,10 @@ export interface SlackNotification {
   managerComment?: string;
   hrComment?: string;
   deductionDetails?: string;
-  mentionIds?: string[];
+  mentionIds?: string[];          // kept for @mention in fallback channel msgs
+  targetSlackIds?: string[];      // DM recipients (Slack member IDs)
+  leaveId?: string;               // for action buttons
+  approvalType?: 'manager' | 'hr'; // which approval stage buttons should trigger
   timestamp: string;
 }
 

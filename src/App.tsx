@@ -38,11 +38,11 @@ const ManagerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return <>{children}</>;
 };
 
-// Admin Route wrapper — Managers and HR
+// Admin Route wrapper — Managers only
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userData, isManager, isHRAdmin } = useAuth();
+  const { userData, isManager } = useAuth();
 
-  if (!userData || (!isManager && !isHRAdmin)) {
+  if (!userData || !isManager) {
     return <Navigate to="/dashboard" replace />;
   }
 

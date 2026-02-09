@@ -112,8 +112,8 @@ export const submitLeaveRequest = async (
     updatedAt: serverTimestamp()
   });
 
-  // Send Slack notification (tag the manager)
-  const managerMentionIds: string[] = manager.slackMemberId ? [manager.slackMemberId] : [];
+  // Send Slack DM to the manager with Approve/Reject buttons
+  const managerTargetIds: string[] = manager.slackMemberId ? [manager.slackMemberId] : [];
   await sendSlackNotification({
     employeeName: employee.name,
     leaveType: formData.leaveType,
@@ -122,7 +122,9 @@ export const submitLeaveRequest = async (
     totalDays,
     status: 'pending_manager',
     timestamp: new Date().toISOString(),
-    mentionIds: managerMentionIds
+    targetSlackIds: managerTargetIds,
+    leaveId: docRef.id,
+    approvalType: 'manager'
   });
 
   return docRef.id;
@@ -199,17 +201,18 @@ export const managerDecision = async (
     updatedAt: serverTimestamp()
   });
 
-  // Send Slack notification
-  // If approved → tag HR admins. If rejected → tag the employee.
-  let mentionIds: string[] = [];
+  // Send Slack DM
+  // If approved → DM HR admins with Approve/Reject buttons. If rejected → DM the employee.
+  let targetSlackIds: string[] = [];
+  let approvalType: 'manager' | 'hr' | undefined;
   if (approved) {
-    mentionIds = await getHRSlackIds();
+    targetSlackIds = await getHRSlackIds();
+    approvalType = 'hr';
   } else {
-    // Tag the employee who applied
     const empRef = doc(db, 'users', leaveData.employeeId);
     const empSnap = await getDoc(empRef);
     if (empSnap.exists() && empSnap.data().slackMemberId) {
-      mentionIds = [empSnap.data().slackMemberId];
+      targetSlackIds = [empSnap.data().slackMemberId];
     }
   }
 
@@ -223,7 +226,9 @@ export const managerDecision = async (
     managerName,
     managerComment: comment,
     timestamp: new Date().toISOString(),
-    mentionIds
+    targetSlackIds,
+    leaveId,
+    approvalType
   });
 };
 
@@ -252,10 +257,10 @@ export const hrApproval = async (
         updatedAt: serverTimestamp()
       });
 
-      // Notify the employee of rejection
+      // Notify the employee of rejection via DM
       const rejEmpRef = doc(db, 'users', leaveData.employeeId);
       const rejEmpSnap = await transaction.get(rejEmpRef);
-      const rejMentionIds: string[] = rejEmpSnap.exists() && rejEmpSnap.data().slackMemberId
+      const rejTargetIds: string[] = rejEmpSnap.exists() && rejEmpSnap.data().slackMemberId
         ? [rejEmpSnap.data().slackMemberId] : [];
 
       await sendSlackNotification({
@@ -267,7 +272,7 @@ export const hrApproval = async (
         status: 'rejected',
         hrComment: comment,
         timestamp: new Date().toISOString(),
-        mentionIds: rejMentionIds
+        targetSlackIds: rejTargetIds
       });
       return;
     }
@@ -280,10 +285,10 @@ export const hrApproval = async (
         updatedAt: serverTimestamp()
       });
 
-      // Notify the employee
+      // Notify the employee via DM
       const wfhEmpRef = doc(db, 'users', leaveData.employeeId);
       const wfhEmpSnap = await transaction.get(wfhEmpRef);
-      const wfhMentionIds: string[] = wfhEmpSnap.exists() && wfhEmpSnap.data().slackMemberId
+      const wfhTargetIds: string[] = wfhEmpSnap.exists() && wfhEmpSnap.data().slackMemberId
         ? [wfhEmpSnap.data().slackMemberId] : [];
 
       await sendSlackNotification({
@@ -295,7 +300,7 @@ export const hrApproval = async (
         status: 'approved',
         hrComment: comment,
         timestamp: new Date().toISOString(),
-        mentionIds: wfhMentionIds
+        targetSlackIds: wfhTargetIds
       });
       return;
     }
@@ -322,9 +327,9 @@ export const hrApproval = async (
         updatedAt: serverTimestamp()
       });
 
-      // Send Slack notification (tag the employee)
+      // Send Slack DM to the employee
       const satEmpData = employeeDoc.data() as User;
-      const satMentionIds: string[] = satEmpData.slackMemberId ? [satEmpData.slackMemberId] : [];
+      const satTargetIds: string[] = satEmpData.slackMemberId ? [satEmpData.slackMemberId] : [];
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
@@ -335,7 +340,7 @@ export const hrApproval = async (
         hrComment: comment,
         deductionDetails: `Comp Off Earned: +${leaveData.totalDays} day(s)`,
         timestamp: new Date().toISOString(),
-        mentionIds: satMentionIds
+        targetSlackIds: satTargetIds
       });
       return;
     }
@@ -392,8 +397,8 @@ export const hrApproval = async (
       updatedAt: serverTimestamp()
     });
 
-    // Send Slack notification (tag the employee)
-    const empMentionIds: string[] = employee.slackMemberId ? [employee.slackMemberId] : [];
+    // Send Slack DM to the employee
+    const empTargetIds: string[] = employee.slackMemberId ? [employee.slackMemberId] : [];
     await sendSlackNotification({
       employeeName: leaveData.employeeName,
       leaveType: leaveData.leaveType,
@@ -404,7 +409,7 @@ export const hrApproval = async (
       hrComment: comment,
       deductionDetails: `Comp Off Used: ${compOffUsed}, Annual Leave Used: ${annualLeaveUsed}${hrOverrideDetails ? ' | ' + hrOverrideDetails : ''}`,
       timestamp: new Date().toISOString(),
-      mentionIds: empMentionIds
+      targetSlackIds: empTargetIds
     });
   });
 };
