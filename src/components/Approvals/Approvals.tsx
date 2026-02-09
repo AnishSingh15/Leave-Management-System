@@ -21,11 +21,6 @@ const Approvals: React.FC = () => {
   const [action, setAction] = useState<'approve' | 'reject'>('approve');
   const [error, setError] = useState('');
 
-  // HR Override fields
-  const [overrideCompOff, setOverrideCompOff] = useState<string>('');
-  const [overrideAnnualLeave, setOverrideAnnualLeave] = useState<string>('');
-  const [useOverride, setUseOverride] = useState(false);
-
   const fetchPendingLeaves = async () => {
     if (!userData?.uid) return;
     
@@ -56,9 +51,6 @@ const Approvals: React.FC = () => {
     setSelectedLeave(leave);
     setAction(actionType);
     setComment('');
-    setUseOverride(false);
-    setOverrideCompOff('');
-    setOverrideAnnualLeave('');
     setError('');
     setModalOpen(true);
   };
@@ -81,16 +73,10 @@ const Approvals: React.FC = () => {
 
     try {
       if (isHRAdmin) {
-        // HR approval with optional override
-        const compOff = useOverride && overrideCompOff ? parseFloat(overrideCompOff) : undefined;
-        const annual = useOverride && overrideAnnualLeave ? parseFloat(overrideAnnualLeave) : undefined;
-        
         await hrApproval(
           selectedLeave.id,
           action === 'approve',
-          comment,
-          compOff,
-          annual
+          comment
         );
       } else {
         // Manager approval
@@ -257,48 +243,7 @@ const Approvals: React.FC = () => {
                 />
               </div>
 
-              {isHRAdmin && action === 'approve' && selectedLeave.leaveType !== 'wfh' && (
-                <div className="override-section">
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="useOverride"
-                      checked={useOverride}
-                      onChange={(e) => setUseOverride(e.target.checked)}
-                    />
-                    <label htmlFor="useOverride">Override Leave Source</label>
-                  </div>
 
-                  {useOverride && (
-                    <div className="override-fields">
-                      <div className="form-group">
-                        <label htmlFor="overrideCompOff">Comp Off Days to Deduct</label>
-                        <input
-                          type="number"
-                          id="overrideCompOff"
-                          value={overrideCompOff}
-                          onChange={(e) => setOverrideCompOff(e.target.value)}
-                          min="0"
-                          step="0.5"
-                          max={selectedLeave.totalDays}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="overrideAnnualLeave">Annual Leave Days to Deduct</label>
-                        <input
-                          type="number"
-                          id="overrideAnnualLeave"
-                          value={overrideAnnualLeave}
-                          onChange={(e) => setOverrideAnnualLeave(e.target.value)}
-                          min="0"
-                          step="0.5"
-                          max={selectedLeave.totalDays}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="modal-footer">

@@ -201,35 +201,61 @@ export const managerDecision = async (
     updatedAt: serverTimestamp()
   });
 
-  // Send Slack DM
-  // If approved → DM HR admins with Approve/Reject buttons. If rejected → DM the employee.
-  let targetSlackIds: string[] = [];
-  let approvalType: 'manager' | 'hr' | undefined;
+  // Send Slack DMs
+  const empRef = doc(db, 'users', leaveData.employeeId);
+  const empSnap = await getDoc(empRef);
+  const empSlackId = empSnap.exists() ? empSnap.data().slackMemberId : null;
+
   if (approved) {
-    targetSlackIds = await getHRSlackIds();
-    approvalType = 'hr';
+    // 1. DM HR admins with link to approve
+    const hrSlackIds = await getHRSlackIds();
+    await sendSlackNotification({
+      employeeName: leaveData.employeeName,
+      leaveType: leaveData.leaveType,
+      startDate: leaveData.startDate.toISOString().split('T')[0],
+      endDate: leaveData.endDate.toISOString().split('T')[0],
+      totalDays: leaveData.totalDays,
+      status: newStatus,
+      managerName,
+      managerComment: comment,
+      timestamp: new Date().toISOString(),
+      targetSlackIds: hrSlackIds,
+      leaveId,
+      approvalType: 'hr'
+    });
+
+    // 2. Also DM the employee that their request was approved by manager & is now pending HR
+    if (empSlackId) {
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: newStatus,
+        managerName,
+        managerComment: comment,
+        timestamp: new Date().toISOString(),
+        targetSlackIds: [empSlackId]
+      });
+    }
   } else {
-    const empRef = doc(db, 'users', leaveData.employeeId);
-    const empSnap = await getDoc(empRef);
-    if (empSnap.exists() && empSnap.data().slackMemberId) {
-      targetSlackIds = [empSnap.data().slackMemberId];
+    // Rejected → DM the employee
+    if (empSlackId) {
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: newStatus,
+        managerName,
+        managerComment: comment,
+        timestamp: new Date().toISOString(),
+        targetSlackIds: [empSlackId]
+      });
     }
   }
-
-  await sendSlackNotification({
-    employeeName: leaveData.employeeName,
-    leaveType: leaveData.leaveType,
-    startDate: leaveData.startDate.toISOString().split('T')[0],
-    endDate: leaveData.endDate.toISOString().split('T')[0],
-    totalDays: leaveData.totalDays,
-    status: newStatus,
-    managerName,
-    managerComment: comment,
-    timestamp: new Date().toISOString(),
-    targetSlackIds,
-    leaveId,
-    approvalType
-  });
 };
 
 // HR approval with leave deduction
