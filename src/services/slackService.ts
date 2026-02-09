@@ -43,79 +43,65 @@ const getStatusColor = (status: LeaveStatus): string => {
 
 // Send Slack notification via Vercel serverless API
 export const sendSlackNotification = async (notification: SlackNotification): Promise<void> => {
-  const fields = [
-    {
-      title: 'Employee',
-      value: notification.employeeName,
-      short: true
-    },
-    {
-      title: 'Leave Type',
-      value: formatLeaveType(notification.leaveType),
-      short: true
-    },
-    {
-      title: 'Dates',
-      value: `${notification.startDate} to ${notification.endDate}`,
-      short: true
-    },
-    {
-      title: 'Total Days',
-      value: notification.totalDays.toString(),
-      short: true
-    },
-    {
-      title: 'Status',
-      value: formatStatus(notification.status),
-      short: true
-    }
-  ];
+  // Build a clean readable message using Slack Block Kit
+  const statusEmoji: Record<LeaveStatus, string> = {
+    pending_manager: '🟡',
+    pending_hr: '🟠',
+    approved: '🟢',
+    rejected: '🔴',
+    cancelled: '⚪'
+  };
 
-  // Add manager info if available
+  const emoji = statusEmoji[notification.status] || '📋';
+  const title = `${emoji}  *Leave Request — ${formatStatus(notification.status)}*`;
+
+  // Main info lines
+  let text = `${title}\n\n`;
+  text += `👤  *Employee:*  ${notification.employeeName}\n`;
+  text += `📋  *Type:*  ${formatLeaveType(notification.leaveType)}\n`;
+  text += `📅  *Dates:*  ${notification.startDate}  →  ${notification.endDate}\n`;
+  text += `🔢  *Days:*  ${notification.totalDays}\n`;
+
   if (notification.managerName) {
-    fields.push({
-      title: 'Manager',
-      value: notification.managerName,
-      short: true
-    });
+    text += `👔  *Manager:*  ${notification.managerName}\n`;
   }
 
-  // Add manager comment if available
-  if (notification.managerComment) {
-    fields.push({
-      title: 'Manager Comment',
-      value: notification.managerComment,
-      short: false
-    });
+  // Comments section
+  if (notification.managerComment || notification.hrComment) {
+    text += `\n———————————————————\n`;
+    if (notification.managerComment) {
+      text += `💬  *Manager Comment:*  _${notification.managerComment}_\n`;
+    }
+    if (notification.hrComment) {
+      text += `💬  *HR Comment:*  _${notification.hrComment}_\n`;
+    }
   }
 
-  // Add HR comment if available
-  if (notification.hrComment) {
-    fields.push({
-      title: 'HR Comment',
-      value: notification.hrComment,
-      short: false
-    });
-  }
-
-  // Add deduction details if available
+  // Deduction details
   if (notification.deductionDetails) {
-    fields.push({
-      title: 'Leave Deduction',
-      value: notification.deductionDetails,
-      short: false
-    });
+    text += `\n———————————————————\n`;
+    text += `📊  *Deduction:*  ${notification.deductionDetails}\n`;
   }
 
   const payload = {
-    attachments: [
+    blocks: [
       {
-        color: getStatusColor(notification.status),
-        title: 'Leave Request Update',
-        fields,
-        footer: 'Leave & Attendance Management System',
-        ts: Math.floor(new Date(notification.timestamp).getTime() / 1000)
-      }
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text
+        }
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `LAMS  •  ${new Date(notification.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`
+          }
+        ]
+      },
+      { type: 'divider' }
     ]
   };
 
