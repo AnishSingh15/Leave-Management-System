@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getEmployeeLeaves } from '../../services/leaveService';
 import { LeaveRequest } from '../../types';
 import { format } from 'date-fns';
+import LeaveCalendar from '../Calendar/LeaveCalendar';
 import './Dashboard.css';
 
 const Dashboard: React.FC = () => {
@@ -116,6 +117,15 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
+      <div className="dashboard-calendar-section">
+        <div className="card">
+          <div className="card-header">
+            <h2>Calendar</h2>
+          </div>
+          <LeaveCalendar />
+        </div>
+      </div>
+
       <div className="dashboard-info">
         <div className="card">
           <h3>Leave Deduction Rules</h3>
@@ -123,7 +133,7 @@ const Dashboard: React.FC = () => {
             <li>Comp Off will be deducted first if selected</li>
             <li>Annual Leave will be deducted for remaining days</li>
             <li>Work From Home (WFH) does not affect leave balance</li>
-            <li>Final deduction happens only after HR approval</li>
+        
           </ul>
         </div>
         

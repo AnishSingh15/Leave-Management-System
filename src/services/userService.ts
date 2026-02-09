@@ -222,6 +222,34 @@ const createAuditLog = async (log: Omit<AuditLog, 'id' | 'timestamp'>): Promise<
   });
 };
 
+// Update Slack Member ID
+export const updateSlackMemberId = async (
+  userId: string,
+  slackMemberId: string,
+  performedBy: string,
+  performedByName: string
+): Promise<void> => {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) throw new Error('User not found');
+
+  const userName = userSnap.data().name || 'Unknown';
+
+  await updateDoc(userRef, {
+    slackMemberId,
+    updatedAt: serverTimestamp()
+  });
+
+  await createAuditLog({
+    action: 'slack_id_update',
+    performedBy,
+    performedByName,
+    targetUserId: userId,
+    targetUserName: userName,
+    details: `Slack Member ID ${slackMemberId ? 'set to ' + slackMemberId : 'cleared'} for ${userName}`
+  });
+};
+
 // Get audit logs
 export const getAuditLogs = async (limit: number = 100): Promise<AuditLog[]> => {
   const q = query(

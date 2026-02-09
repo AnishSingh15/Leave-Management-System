@@ -125,3 +125,25 @@
 .admin-panel .data-table td {
   vertical-align: middle;
 }
+
+.slack-id-cell {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 0.75rem;
+}
+
+.slack-id-cell.set {
+  color: #2563eb;
+}
+
+.slack-id-cell.not-set {
+  color: #94a3b8;
+}
+
+.btn-action.slack {
+  color: #611f69;
+  border-color: #e0d0e5;
+}
+
+.btn-action.slack:hover {
+  background: #f3e8f7;
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getAllUsers, adjustCompOffBalance, adjustAnnualLeaveBalance, updateUserRole, toggleUserStatus, getAuditLogs } from '../../services/userService';
+import { getAllUsers, adjustCompOffBalance, adjustAnnualLeaveBalance, updateUserRole, toggleUserStatus, getAuditLogs, updateSlackMemberId } from '../../services/userService';
 import { getAllLeaves, cancelLeaveRequest } from '../../services/leaveService';
 import { User, UserRole, LeaveRequest, AuditLog } from '../../types';
 import { format } from 'date-fns';
@@ -17,11 +17,12 @@ const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // Modal states
-  const [modalType, setModalType] = useState<'compOff' | 'annual' | 'role' | null>(null);
+  const [modalType, setModalType] = useState<'compOff' | 'annual' | 'role' | 'slackId' | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('employee');
+  const [slackId, setSlackId] = useState('');
   const [error, setError] = useState('');
   const [processing, setProcessing] = useState(false);
 
@@ -62,6 +63,13 @@ const AdminPanel: React.FC = () => {
     setSelectedUser(user);
     setModalType('role');
     setNewRole(user.role);
+    setError('');
+  };
+
+  const openSlackIdModal = (user: User) => {
+    setSelectedUser(user);
+    setModalType('slackId');
+    setSlackId(user.slackMemberId || '');
     setError('');
   };
 
@@ -156,6 +164,28 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleSlackIdUpdate = async () => {
+    if (!selectedUser || !userData) return;
+
+    setProcessing(true);
+    setError('');
+
+    try {
+      await updateSlackMemberId(
+        selectedUser.uid,
+        slackId.trim(),
+        userData.uid,
+        userData.name
+      );
+      closeModal();
+      fetchData();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update Slack ID');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleCancelLeave = async (leave: LeaveRequest) => {
     if (!window.confirm(`Are you sure you want to cancel this leave request for ${leave.employeeName}?`)) {
       return;
@@ -221,6 +251,7 @@ const AdminPanel: React.FC = () => {
                       <th>Annual Leave</th>
                       <th>Comp Off</th>
                       <th>Status</th>
+                      <th>Slack ID</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -239,6 +270,11 @@ const AdminPanel: React.FC = () => {
                         <td>
                           <span className={`status-indicator ${user.isActive ? 'active' : 'inactive'}`}>
                             {user.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`slack-id-cell ${user.slackMemberId ? 'set' : 'not-set'}`}>
+                            {user.slackMemberId || '—'}
                           </span>
                         </td>
                         <td>
@@ -263,6 +299,13 @@ const AdminPanel: React.FC = () => {
                               title="Change Role"
                             >
                               Role
+                            </button>
+                            <button
+                              className="btn-action slack"
+                              onClick={() => openSlackIdModal(user)}
+                              title="Set Slack Member ID"
+                            >
+                              Slack
                             </button>
                             <button
                               className={`btn-action ${user.isActive ? 'danger' : 'success'}`}
@@ -463,6 +506,52 @@ const AdminPanel: React.FC = () => {
                 disabled={processing || newRole === selectedUser.role}
               >
                 {processing ? 'Processing...' : 'Update Role'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Slack ID Modal */}
+      {modalType === 'slackId' && selectedUser && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Set Slack Member ID</h2>
+              <button className="modal-close" onClick={closeModal}>&times;</button>
+            </div>
+
+            <div className="modal-body">
+              {error && <div className="auth-error">{error}</div>}
+
+              <div className="modal-info">
+                <p><strong>Employee:</strong> {selectedUser.name}</p>
+                <p><strong>Current Slack ID:</strong> {selectedUser.slackMemberId || 'Not set'}</p>
+              </div>
+
+              <div className="form-group">
+                <label>Slack Member ID</label>
+                <input
+                  type="text"
+                  value={slackId}
+                  onChange={(e) => setSlackId(e.target.value)}
+                  placeholder="e.g., U04ABCD1234"
+                />
+                <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Find this in Slack → Profile → ⋮ → Copy member ID
+                </small>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeModal}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSlackIdUpdate}
+                disabled={processing}
+              >
+                {processing ? 'Saving...' : 'Save Slack ID'}
               </button>
             </div>
           </div>

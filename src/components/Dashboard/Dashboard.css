@@ -25,3 +25,16 @@
   margin: 0;
   color: #64748b;
 }
+
+.dashboard-calendar-section {
+  margin-top: 20px;
+  margin-bottom: 0;
+}
+
+.dashboard-calendar-section .card {
+  padding: 20px;
+}
+
+.dashboard-calendar-section .card-header {
+  margin-bottom: 15px;
+}

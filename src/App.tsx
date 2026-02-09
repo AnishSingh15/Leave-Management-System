@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
+import ForgotPassword from './components/Auth/ForgotPassword';
 import Dashboard from './components/Dashboard/Dashboard';
 import LeaveForm from './components/Leave/LeaveForm';
 import LeaveHistory from './components/Leave/LeaveHistory';
@@ -37,11 +38,11 @@ const ManagerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return <>{children}</>;
 };
 
-// HR Admin Route wrapper
+// Admin Route wrapper — Managers and HR
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { userData, isHRAdmin } = useAuth();
+  const { userData, isManager, isHRAdmin } = useAuth();
 
-  if (!userData || !isHRAdmin) {
+  if (!userData || (!isManager && !isHRAdmin)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -80,6 +81,14 @@ const AppRoutes: React.FC = () => {
         element={
           <PublicRoute>
             <Register />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
           </PublicRoute>
         }
       />

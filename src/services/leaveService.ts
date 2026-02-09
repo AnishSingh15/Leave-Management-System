@@ -16,6 +16,18 @@ import { db } from '../config/firebase';
 import { LeaveRequest, LeaveFormData, LeaveStatus, User } from '../types';
 import { sendSlackNotification } from './slackService';
 
+// Helper: get Slack Member IDs for all HR admins
+const getHRSlackIds = async (): Promise<string[]> => {
+  const q = query(
+    collection(db, 'users'),
+    where('role', '==', 'hr_admin')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs
+    .map(d => d.data().slackMemberId)
+    .filter((id): id is string => !!id);
+};
+
 // Convert Firestore document to LeaveRequest
 const convertLeaveDoc = (doc: any): LeaveRequest => {
   const data = doc.data();
@@ -56,8 +68,8 @@ export const submitLeaveRequest = async (
 ): Promise<string> => {
   const totalDays = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
   
-  // Validate leave balance
-  if (formData.leaveType !== 'wfh') {
+  // Validate leave balance (skip for WFH and Saturday Work)
+  if (formData.leaveType !== 'wfh' && formData.leaveType !== 'extra_work') {
     const availableCompOff = formData.useCompOff ? employee.compOffBalance : 0;
     const availableAnnual = formData.useAnnualLeave ? employee.annualLeaveBalance : 0;
     
@@ -100,7 +112,8 @@ export const submitLeaveRequest = async (
     updatedAt: serverTimestamp()
   });
 
-  // Send Slack notification
+  // Send Slack notification (tag the manager)
+  const managerMentionIds: string[] = manager.slackMemberId ? [manager.slackMemberId] : [];
   await sendSlackNotification({
     employeeName: employee.name,
     leaveType: formData.leaveType,
@@ -108,7 +121,8 @@ export const submitLeaveRequest = async (
     endDate: formData.endDate,
     totalDays,
     status: 'pending_manager',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mentionIds: managerMentionIds
   });
 
   return docRef.id;
@@ -186,6 +200,19 @@ export const managerDecision = async (
   });
 
   // Send Slack notification
+  // If approved → tag HR admins. If rejected → tag the employee.
+  let mentionIds: string[] = [];
+  if (approved) {
+    mentionIds = await getHRSlackIds();
+  } else {
+    // Tag the employee who applied
+    const empRef = doc(db, 'users', leaveData.employeeId);
+    const empSnap = await getDoc(empRef);
+    if (empSnap.exists() && empSnap.data().slackMemberId) {
+      mentionIds = [empSnap.data().slackMemberId];
+    }
+  }
+
   await sendSlackNotification({
     employeeName: leaveData.employeeName,
     leaveType: leaveData.leaveType,
@@ -195,7 +222,8 @@ export const managerDecision = async (
     status: newStatus,
     managerName,
     managerComment: comment,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mentionIds
   });
 };
 
@@ -223,6 +251,24 @@ export const hrApproval = async (
         hrComment: comment,
         updatedAt: serverTimestamp()
       });
+
+      // Notify the employee of rejection
+      const rejEmpRef = doc(db, 'users', leaveData.employeeId);
+      const rejEmpSnap = await transaction.get(rejEmpRef);
+      const rejMentionIds: string[] = rejEmpSnap.exists() && rejEmpSnap.data().slackMemberId
+        ? [rejEmpSnap.data().slackMemberId] : [];
+
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: 'rejected',
+        hrComment: comment,
+        timestamp: new Date().toISOString(),
+        mentionIds: rejMentionIds
+      });
       return;
     }
 
@@ -232,6 +278,64 @@ export const hrApproval = async (
         status: 'approved',
         hrComment: comment,
         updatedAt: serverTimestamp()
+      });
+
+      // Notify the employee
+      const wfhEmpRef = doc(db, 'users', leaveData.employeeId);
+      const wfhEmpSnap = await transaction.get(wfhEmpRef);
+      const wfhMentionIds: string[] = wfhEmpSnap.exists() && wfhEmpSnap.data().slackMemberId
+        ? [wfhEmpSnap.data().slackMemberId] : [];
+
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: 'approved',
+        hrComment: comment,
+        timestamp: new Date().toISOString(),
+        mentionIds: wfhMentionIds
+      });
+      return;
+    }
+
+    // Saturday Work: credit comp-off balance instead of deducting
+    if (leaveData.leaveType === 'extra_work') {
+      const employeeRef = doc(db, 'users', leaveData.employeeId);
+      const employeeDoc = await transaction.get(employeeRef);
+      
+      if (!employeeDoc.exists()) {
+        throw new Error('Employee not found');
+      }
+
+      const employee = employeeDoc.data() as User;
+      
+      transaction.update(employeeRef, {
+        compOffBalance: employee.compOffBalance + leaveData.totalDays,
+        updatedAt: serverTimestamp()
+      });
+
+      transaction.update(leaveRef, {
+        status: 'approved',
+        hrComment: comment,
+        updatedAt: serverTimestamp()
+      });
+
+      // Send Slack notification (tag the employee)
+      const satEmpData = employeeDoc.data() as User;
+      const satMentionIds: string[] = satEmpData.slackMemberId ? [satEmpData.slackMemberId] : [];
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: 'approved',
+        hrComment: comment,
+        deductionDetails: `Comp Off Earned: +${leaveData.totalDays} day(s)`,
+        timestamp: new Date().toISOString(),
+        mentionIds: satMentionIds
       });
       return;
     }
@@ -288,7 +392,8 @@ export const hrApproval = async (
       updatedAt: serverTimestamp()
     });
 
-    // Send Slack notification
+    // Send Slack notification (tag the employee)
+    const empMentionIds: string[] = employee.slackMemberId ? [employee.slackMemberId] : [];
     await sendSlackNotification({
       employeeName: leaveData.employeeName,
       leaveType: leaveData.leaveType,
@@ -298,7 +403,8 @@ export const hrApproval = async (
       status: 'approved',
       hrComment: comment,
       deductionDetails: `Comp Off Used: ${compOffUsed}, Annual Leave Used: ${annualLeaveUsed}${hrOverrideDetails ? ' | ' + hrOverrideDetails : ''}`,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      mentionIds: empMentionIds
     });
   });
 };

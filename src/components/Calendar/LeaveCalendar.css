@@ -1,0 +1,229 @@
+.leave-calendar {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.06);
+}
+
+/* Header */
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.cal-month-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.cal-nav-btn {
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  transition: all 0.2s;
+}
+
+.cal-nav-btn:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+/* Day labels row */
+.cal-days-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.cal-day-label {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 6px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cal-day-label.weekend-label {
+  color: #dc2626;
+}
+
+/* Calendar body */
+.cal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-cell {
+  position: relative;
+  min-height: 48px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.cal-date-num {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+/* Outside month */
+.cal-outside {
+  opacity: 0.3;
+}
+
+/* Weekend */
+.cal-weekend {
+  background: #fef2f2;
+}
+
+.cal-weekend .cal-date-num {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* National holiday */
+.cal-holiday {
+  background: #fef9c3 !important;
+}
+
+.cal-holiday .cal-date-num {
+  color: #b45309 !important;
+  font-weight: 700;
+}
+
+.cal-holiday-name {
+  font-size: 0.55rem;
+  color: #92400e;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.cal-holiday-dot {
+  font-size: 1rem;
+  line-height: 1;
+  color: #b45309;
+  margin-top: -2px;
+}
+
+/* Today */
+.cal-today {
+  border: 2px solid #2563eb;
+}
+
+.cal-today .cal-date-num {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* Legend */
+.cal-legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.cal-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.cal-legend-dot.weekend-dot {
+  background: #fecaca;
+  border: 1px solid #dc2626;
+}
+
+.cal-legend-dot.holiday-dot {
+  background: #fde68a;
+  border: 1px solid #b45309;
+}
+
+.cal-legend-dot.today-dot {
+  background: #bfdbfe;
+  border: 2px solid #2563eb;
+}
+
+/* Compact mode — for forms */
+.leave-calendar.compact {
+  padding: 14px;
+}
+
+.leave-calendar.compact .cal-cell {
+  min-height: 32px;
+  padding: 2px 4px;
+}
+
+.leave-calendar.compact .cal-date-num {
+  font-size: 0.75rem;
+}
+
+.leave-calendar.compact .cal-month-title {
+  font-size: 1rem;
+}
+
+.leave-calendar.compact .cal-nav-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .cal-cell {
+    min-height: 36px;
+    padding: 2px;
+  }
+
+  .cal-date-num {
+    font-size: 0.75rem;
+  }
+
+  .cal-holiday-name {
+    display: none;
+  }
+}

@@ -2,7 +2,7 @@
 export type UserRole = 'employee' | 'manager' | 'hr_admin';
 
 // Leave types
-export type LeaveType = 'casual' | 'paid' | 'sick' | 'comp_off' | 'wfh';
+export type LeaveType = 'casual' | 'paid' | 'sick' | 'comp_off' | 'wfh' | 'extra_work';
 
 // Leave status
 export type LeaveStatus = 'pending_manager' | 'pending_hr' | 'approved' | 'rejected' | 'cancelled';
@@ -15,6 +15,7 @@ export interface User {
   role: UserRole;
   annualLeaveBalance: number;
   compOffBalance: number;
+  slackMemberId?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -79,6 +80,7 @@ export interface SlackNotification {
   managerComment?: string;
   hrComment?: string;
   deductionDetails?: string;
+  mentionIds?: string[];
   timestamp: string;
 }
 

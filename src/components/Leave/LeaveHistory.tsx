@@ -33,8 +33,17 @@ const LeaveHistory: React.FC = () => {
   const formatStatus = (status: string) => 
     status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-  const formatLeaveType = (type: string) => 
-    type.replace(/_/g, ' ').toUpperCase();
+  const formatLeaveType = (type: string) => {
+    const types: Record<string, string> = {
+      casual: 'Casual Leave',
+      paid: 'Paid Leave',
+      sick: 'Sick Leave',
+      comp_off: 'Comp Off',
+      wfh: 'WFH',
+      extra_work: 'Extra Day Work'
+    };
+    return types[type] || type.replace(/_/g, ' ').toUpperCase();
+  };
 
   const filteredLeaves = filter === 'all' 
     ? leaves 

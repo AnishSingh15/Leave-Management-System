@@ -3,6 +3,12 @@
   margin: 0 auto;
 }
 
+.leave-form-calendar {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
 .balance-summary {
   display: flex;
   gap: 30px;

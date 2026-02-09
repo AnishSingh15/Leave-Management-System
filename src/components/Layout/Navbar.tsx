@@ -95,7 +95,7 @@ const Navbar: React.FC = () => {
           </Link>
         )}
         
-        {isHRAdmin && (
+        {(isManager || isHRAdmin) && (
           <Link 
             to="/admin" 
             className={`nav-link ${isActive('/admin') ? 'active' : ''}`}

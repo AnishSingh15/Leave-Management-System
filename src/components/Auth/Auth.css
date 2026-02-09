@@ -165,3 +165,26 @@
 .auth-link a:hover {
   text-decoration: underline;
 }
+
+.forgot-link {
+  margin-top: 15px;
+  margin-bottom: 0;
+}
+
+.forgot-description {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.auth-success {
+  background-color: #ecfdf5;
+  color: #059669;
+  padding: 12px 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  border: 1px solid #a7f3d0;
+}

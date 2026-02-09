@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 import './Auth.css';
 
-const Login: React.FC = () => {
+const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      await sendPasswordResetEmail(auth, email);
+      setSuccess('Password reset link sent! Check your email inbox (and spam folder).');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email address');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Please enter a valid email address');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many attempts. Please try again later.');
+      } else {
+        setError(err.message || 'Failed to send reset email');
+      }
     } finally {
       setLoading(false);
     }
@@ -33,12 +41,16 @@ const Login: React.FC = () => {
           <h1>LAMS</h1>
           <p>Leave & Attendance Management System</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="auth-form">
-          <h2>Sign In</h2>
-          
+          <h2>Reset Password</h2>
+          <p className="forgot-description">
+            Enter your registered email address and we'll send you a link to reset your password.
+          </p>
+
           {error && <div className="auth-error">{error}</div>}
-          
+          {success && <div className="auth-success">{success}</div>}
+
           <div className="form-group">
             <label htmlFor="email">Email</label>
             <input
@@ -50,29 +62,13 @@ const Login: React.FC = () => {
               required
             />
           </div>
-          
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
-          
+
           <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
 
-          <p className="auth-link forgot-link">
-            <Link to="/forgot-password">Forgot Password?</Link>
-          </p>
-          
           <p className="auth-link">
-            Don't have an account? <Link to="/register">Register</Link>
+            Remember your password? <Link to="/login">Sign In</Link>
           </p>
         </form>
       </div>
@@ -80,4 +76,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default ForgotPassword;

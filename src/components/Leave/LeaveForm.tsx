@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { submitLeaveRequest, calculateLeaveDays } from '../../services/leaveService';
 import { getManagers, getUserById } from '../../services/userService';
 import { LeaveFormData, User } from '../../types';
+import LeaveCalendar from '../Calendar/LeaveCalendar';
 import './LeaveForm.css';
 
 const LeaveForm: React.FC = () => {
@@ -44,11 +45,11 @@ const LeaveForm: React.FC = () => {
   // Update checkbox defaults based on balance
   useEffect(() => {
     if (userData) {
-      if (userData.compOffBalance > 0) {
-        setFormData(prev => ({ ...prev, useCompOff: true, useAnnualLeave: false }));
-      } else {
-        setFormData(prev => ({ ...prev, useCompOff: false, useAnnualLeave: true }));
-      }
+      setFormData(prev => ({
+        ...prev,
+        useCompOff: userData.compOffBalance > 0,
+        useAnnualLeave: true
+      }));
     }
   }, [userData]);
 
@@ -94,8 +95,8 @@ const LeaveForm: React.FC = () => {
       return false;
     }
 
-    // Validate leave source for non-WFH
-    if (formData.leaveType !== 'wfh') {
+    // Validate leave source for leave types that deduct balance
+    if (formData.leaveType !== 'wfh' && formData.leaveType !== 'extra_work') {
       if (!formData.useCompOff && !formData.useAnnualLeave) {
         setError('Please select at least one leave source');
         return false;
@@ -142,17 +143,42 @@ const LeaveForm: React.FC = () => {
   };
 
   const isWFH = formData.leaveType === 'wfh';
+  const isExtraWork = formData.leaveType === 'extra_work';
+  const noDeduction = isWFH || isExtraWork;
   const compOffDisabled = !userData?.compOffBalance || userData.compOffBalance <= 0;
   const annualLeaveDisabled = !userData?.annualLeaveBalance || userData.annualLeaveBalance <= 0;
+
+  const getPageTitle = () => {
+    if (isExtraWork) return 'Submit Extra Day Work Request';
+    if (isWFH) return 'Submit WFH Request';
+    return 'Apply for Leave';
+  };
+
+  const getPageSubtitle = () => {
+    if (isExtraWork) return 'Log weekend or holiday work to earn comp-off days';
+    if (isWFH) return 'Submit your work from home request';
+    return 'Fill in the details below to submit your leave request';
+  };
+
+  const getButtonText = () => {
+    if (loading) return 'Submitting...';
+    if (isExtraWork) return 'Submit Extra Day Work Request';
+    if (isWFH) return 'Submit WFH Request';
+    return 'Submit Leave Request';
+  };
 
   return (
     <div className="leave-form-container">
       <div className="page-header">
-        <h1>Apply for Leave</h1>
-        <p>Fill in the details below to submit your leave request</p>
+        <h1>{getPageTitle()}</h1>
+        <p>{getPageSubtitle()}</p>
       </div>
 
       <div className="card">
+        <div className="leave-form-calendar">
+          <LeaveCalendar compact />
+        </div>
+
         <div className="balance-summary">
           <div className="balance-item">
             <span className="balance-label">Annual Leave:</span>
@@ -183,6 +209,7 @@ const LeaveForm: React.FC = () => {
                 <option value="sick">Sick Leave</option>
                 <option value="comp_off">Comp Off Usage</option>
                 <option value="wfh">Work From Home</option>
+                <option value="extra_work">Extra Day Work — Weekend / Holiday (Earn Comp Off)</option>
               </select>
             </div>
 
@@ -254,7 +281,7 @@ const LeaveForm: React.FC = () => {
             </div>
           </div>
 
-          {!isWFH && (
+          {!noDeduction && (
             <div className="form-group">
               <label>Leave Source *</label>
               <p className="help-text">Select which balance to deduct from</p>
@@ -316,7 +343,7 @@ const LeaveForm: React.FC = () => {
               className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? 'Submitting...' : 'Submit Leave Request'}
+              {getButtonText()}
             </button>
           </div>
         </form>

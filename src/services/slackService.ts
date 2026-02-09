@@ -12,7 +12,8 @@ const formatLeaveType = (type: LeaveType): string => {
     paid: 'Paid Leave',
     sick: 'Sick Leave',
     comp_off: 'Comp Off',
-    wfh: 'Work From Home'
+    wfh: 'Work From Home',
+    extra_work: 'Extra Day Work'
   };
   return types[type] || type;
 };
@@ -43,8 +44,14 @@ export const sendSlackNotification = async (notification: SlackNotification): Pr
   const emoji = statusEmoji[notification.status] || '📋';
   const title = `${emoji}  *Leave Request — ${formatStatus(notification.status)}*`;
 
+  // Build @mention tags if mentionIds are provided
+  let mentionLine = '';
+  if (notification.mentionIds && notification.mentionIds.length > 0) {
+    mentionLine = notification.mentionIds.map(id => `<@${id}>`).join(' ') + '\n\n';
+  }
+
   // Main info lines
-  let text = `${title}\n\n`;
+  let text = `${mentionLine}${title}\n\n`;
   text += `👤  *Employee:*  ${notification.employeeName}\n`;
   text += `📋  *Type:*  ${formatLeaveType(notification.leaveType)}\n`;
   text += `📅  *Dates:*  ${notification.startDate}  →  ${notification.endDate}\n`;
