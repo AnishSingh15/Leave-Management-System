@@ -209,7 +209,7 @@ const AdminPanel: React.FC = () => {
   return (
     <div className="admin-panel">
       <div className="page-header">
-        <h1>HR Admin Panel</h1>
+        <h1>Admin Panel</h1>
         <p>Manage users, leaves, and system settings</p>
       </div>
 

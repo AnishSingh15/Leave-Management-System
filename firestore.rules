@@ -44,7 +44,7 @@ service cloud.firestore {
           request.resource.data.role == resource.data.role &&
           request.resource.data.annualLeaveBalance == resource.data.annualLeaveBalance &&
           request.resource.data.compOffBalance == resource.data.compOffBalance) ||
-        isHRAdmin()
+        isManager()
       );
       
       // Only HR Admin can delete users
@@ -59,7 +59,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         resource.data.employeeId == request.auth.uid ||
         resource.data.managerId == request.auth.uid ||
-        isHRAdmin()
+        isManager()
       );
       
       // Anyone authenticated can create a leave request for themselves
@@ -85,12 +85,11 @@ service cloud.firestore {
 
     // Audit logs collection
     match /auditLogs/{logId} {
-      // Only HR Admin can read audit logs
-      allow read: if isHRAdmin();
+      // Managers and HR can read audit logs
+      allow read: if isManager();
       
-      // System can create audit logs (via Cloud Functions)
-      // HR Admin can create audit logs from client
-      allow create: if isHRAdmin();
+      // Managers and HR can create audit logs
+      allow create: if isManager();
       
       // No one can update or delete audit logs
       allow update, delete: if false;
