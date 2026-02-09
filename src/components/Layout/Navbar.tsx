@@ -73,7 +73,7 @@ const Navbar: React.FC = () => {
           to="/apply-leave" 
           className={`nav-link ${isActive('/apply-leave') ? 'active' : ''}`}
         >
-          Apply Leave
+          Apply Leave/Extra work/WFh
         </Link>
         
         <Link 

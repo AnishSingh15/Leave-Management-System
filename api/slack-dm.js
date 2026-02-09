@@ -31,29 +31,17 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, skipped: true, reason: 'No target IDs' });
   }
 
-  // Build the final blocks — add Approve/Reject buttons if actionable
+  // Build the final blocks — add a link to the LAMS approvals page
   let finalBlocks = [...blocks];
 
   if (leaveId && approvalType) {
+    const lamsUrl = 'https://leave-management-system-nine-chi.vercel.app/approvals';
     finalBlocks.push({
-      type: 'actions',
-      block_id: `leave_actions_${leaveId}`,
-      elements: [
-        {
-          type: 'button',
-          text: { type: 'plain_text', text: '✅  Approve', emoji: true },
-          style: 'primary',
-          value: JSON.stringify({ leaveId, action: 'approve', type: approvalType }),
-          action_id: 'leave_approve'
-        },
-        {
-          type: 'button',
-          text: { type: 'plain_text', text: '❌  Reject', emoji: true },
-          style: 'danger',
-          value: JSON.stringify({ leaveId, action: 'reject', type: approvalType }),
-          action_id: 'leave_reject'
-        }
-      ]
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `👉  *<${lamsUrl}|Open LAMS to Approve / Reject>*`
+      }
     });
   }
 

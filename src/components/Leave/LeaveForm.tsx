@@ -42,13 +42,16 @@ const LeaveForm: React.FC = () => {
     fetchManagers();
   }, [userData?.uid]);
 
-  // Update checkbox defaults based on balance
+  // Update default leave source based on balance
   useEffect(() => {
     if (userData) {
+      // Default to annual leave; if unavailable, fallback to comp-off
+      const hasAnnual = (userData.annualLeaveBalance || 0) > 0;
+      const hasCompOff = (userData.compOffBalance || 0) > 0;
       setFormData(prev => ({
         ...prev,
-        useCompOff: userData.compOffBalance > 0,
-        useAnnualLeave: true
+        useCompOff: !hasAnnual && hasCompOff,
+        useAnnualLeave: hasAnnual
       }));
     }
   }, [userData]);
@@ -69,6 +72,15 @@ const LeaveForm: React.FC = () => {
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
+    } else if (type === 'radio') {
+      // Leave source radio: only one can be selected
+      if (name === 'leaveSource') {
+        setFormData(prev => ({
+          ...prev,
+          useCompOff: value === 'compOff',
+          useAnnualLeave: value === 'annualLeave'
+        }));
+      }
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -288,29 +300,31 @@ const LeaveForm: React.FC = () => {
               <div className="checkbox-group">
                 <div className={`checkbox-item ${compOffDisabled ? 'disabled' : ''}`}>
                   <input
-                    type="checkbox"
+                    type="radio"
                     id="useCompOff"
-                    name="useCompOff"
+                    name="leaveSource"
+                    value="compOff"
                     checked={formData.useCompOff}
                     onChange={handleChange}
                     disabled={compOffDisabled}
                   />
                   <label htmlFor="useCompOff">
-                    Use Comp Off ({userData?.compOffBalance || 0} available)
+                    Comp Off ({userData?.compOffBalance || 0} available)
                   </label>
                 </div>
 
                 <div className={`checkbox-item ${annualLeaveDisabled ? 'disabled' : ''}`}>
                   <input
-                    type="checkbox"
+                    type="radio"
                     id="useAnnualLeave"
-                    name="useAnnualLeave"
+                    name="leaveSource"
+                    value="annualLeave"
                     checked={formData.useAnnualLeave}
                     onChange={handleChange}
                     disabled={annualLeaveDisabled}
                   />
                   <label htmlFor="useAnnualLeave">
-                    Use Annual Leave ({userData?.annualLeaveBalance || 0} available)
+                    Annual Leave ({userData?.annualLeaveBalance || 0} available)
                   </label>
                 </div>
               </div>

@@ -199,26 +199,14 @@ export default async function handler(req, res) {
           '💬  *Manager Comment*': comment
         });
 
-        // Add HR approve/reject buttons
+        // Add link to LAMS approvals page for HR
+        const lamsUrl = 'https://leave-management-system-nine-chi.vercel.app/approvals';
         hrBlocks.push({
-          type: 'actions',
-          block_id: `leave_actions_${leaveId}`,
-          elements: [
-            {
-              type: 'button',
-              text: { type: 'plain_text', text: '✅  Approve', emoji: true },
-              style: 'primary',
-              value: JSON.stringify({ leaveId, action: 'approve', type: 'hr' }),
-              action_id: 'leave_approve'
-            },
-            {
-              type: 'button',
-              text: { type: 'plain_text', text: '❌  Reject', emoji: true },
-              style: 'danger',
-              value: JSON.stringify({ leaveId, action: 'reject', type: 'hr' }),
-              action_id: 'leave_reject'
-            }
-          ]
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `👉  *<${lamsUrl}|Open LAMS to Approve / Reject>*`
+          }
         });
 
         for (const hrId of hrSlackIds) {
