@@ -1,7 +1,9 @@
 import { SlackNotification, LeaveStatus, LeaveType } from '../types';
 
-// Vercel serverless API endpoint for Slack (keeps webhook secret on server)
+// In production (Vercel): uses serverless API at /api/slack (keeps webhook secret)
+// In local dev: calls the webhook directly via REACT_APP_SLACK_WEBHOOK_URL env var
 const SLACK_API_ENDPOINT = '/api/slack';
+const LOCAL_SLACK_WEBHOOK = process.env.REACT_APP_SLACK_WEBHOOK_URL;
 
 // Format leave type for display
 const formatLeaveType = (type: LeaveType): string => {
@@ -118,8 +120,11 @@ export const sendSlackNotification = async (notification: SlackNotification): Pr
   };
 
   try {
-    // Send via Vercel serverless function (keeps Slack webhook URL secret on server)
-    await fetch(SLACK_API_ENDPOINT, {
+    // In local dev: call Slack webhook directly if env var is set
+    // In production (Vercel): use serverless API to keep webhook secret
+    const endpoint = LOCAL_SLACK_WEBHOOK || SLACK_API_ENDPOINT;
+
+    await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

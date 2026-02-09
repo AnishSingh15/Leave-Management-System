@@ -34,7 +34,7 @@ service cloud.firestore {
       
       // Users can create their own profile on registration
       allow create: if isAuthenticated() && isOwner(userId) && 
-        request.resource.data.role == 'employee' &&
+        request.resource.data.role in ['employee', 'manager', 'hr_admin'] &&
         request.resource.data.annualLeaveBalance == 14 &&
         request.resource.data.compOffBalance == 0;
       

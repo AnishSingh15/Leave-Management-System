@@ -15,7 +15,7 @@ interface AuthContextType {
   userData: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string, role?: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   isEmployee: boolean;
   isManager: boolean;
@@ -69,12 +69,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, name: string): Promise<void> => {
+  const register = async (email: string, password: string, name: string, role: UserRole = 'employee'): Promise<void> => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const newUser: Omit<User, 'uid'> = {
       name,
       email,
-      role: 'employee' as UserRole,
+      role,
       annualLeaveBalance: 14,
       compOffBalance: 0,
       isActive: true,

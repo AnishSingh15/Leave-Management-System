@@ -49,6 +49,7 @@ const Approvals: React.FC = () => {
 
   useEffect(() => {
     fetchPendingLeaves();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData?.uid, isHRAdmin]);
 
   const openModal = (leave: LeaveRequest, actionType: 'approve' | 'reject') => {

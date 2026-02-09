@@ -15,12 +15,12 @@
 }
 
 .tab:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #2563eb;
+  color: #2563eb;
 }
 
 .tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #2563eb;
   color: white;
   border-color: transparent;
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { submitLeaveRequest, calculateLeaveDays } from '../../services/leaveService';
 import { getManagers, getUserById } from '../../services/userService';
-import { LeaveFormData, LeaveType, User } from '../../types';
+import { LeaveFormData, User } from '../../types';
 import './LeaveForm.css';
 
 const LeaveForm: React.FC = () => {

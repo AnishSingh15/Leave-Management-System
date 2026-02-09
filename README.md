@@ -96,7 +96,7 @@ firebase deploy --only firestore:indexes
 
 ### Step 6: Create First HR Admin
 
-1. Register a user through the app normally
+1. Register a user through the app normall
 2. Go to **Firebase Console → Firestore Database**
 3. Open the `users` collection → find your user document
 4. Change `role` from `"employee"` to `"hr_admin"`

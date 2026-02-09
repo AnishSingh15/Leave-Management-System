@@ -7,14 +7,14 @@
 
 .dashboard-info .card h3 {
   margin-top: 0;
-  color: #333;
+  color: #1e293b;
   margin-bottom: 15px;
 }
 
 .dashboard-info .card ul {
   margin: 0;
   padding-left: 20px;
-  color: #666;
+  color: #64748b;
 }
 
 .dashboard-info .card li {
@@ -23,5 +23,5 @@
 
 .dashboard-info .card p {
   margin: 0;
-  color: #666;
+  color: #64748b;
 }

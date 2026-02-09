@@ -2,10 +2,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(37, 99, 235, 0.1);
   padding: 0 30px;
   height: 70px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 8px rgba(37, 99, 235, 0.06);
 }
 
 .navbar-brand a {
@@ -13,7 +16,7 @@
 }
 
 .navbar-brand h1 {
-  color: white;
+  color: #2563eb;
   margin: 0;
   font-size: 1.8rem;
   font-weight: 700;
@@ -22,25 +25,25 @@
 
 .navbar-menu {
   display: flex;
-  gap: 10px;
+  gap: 6px;
 }
 
 .nav-link {
-  color: rgba(255, 255, 255, 0.85);
+  color: #475569;
   text-decoration: none;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 500;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
+  background-color: #eff6ff;
+  color: #2563eb;
 }
 
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.25);
+  background-color: #2563eb;
   color: white;
 }
 
@@ -57,32 +60,33 @@
 }
 
 .user-name {
-  color: white;
+  color: #1e293b;
   font-weight: 600;
   font-size: 0.95rem;
 }
 
 .user-role {
-  color: rgba(255, 255, 255, 0.75);
+  color: #2563eb;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 1px;
+  font-weight: 500;
 }
 
 .logout-button {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: white;
+  color: #2563eb;
+  border: 1.5px solid #2563eb;
   padding: 8px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .logout-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
+  background-color: #2563eb;
+  color: white;
 }
 
 @media (max-width: 768px) {

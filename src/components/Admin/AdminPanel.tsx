@@ -47,6 +47,7 @@ const AdminPanel: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const openAdjustmentModal = (user: User, type: 'compOff' | 'annual') => {

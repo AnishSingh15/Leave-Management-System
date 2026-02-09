@@ -9,8 +9,8 @@ body {
     Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f7fa;
-  color: #333;
+  background-color: #f0f4ff;
+  color: #1e293b;
 }
 
 .app-loading {
@@ -19,7 +19,7 @@ body {
   justify-content: center;
   min-height: 100vh;
   font-size: 1.2rem;
-  color: #667eea;
+  color: #2563eb;
 }
 
 /* Scrollbar styling */
@@ -29,28 +29,28 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #f1f5f9;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: #94a3b8;
 }
 
 /* Selection */
 ::selection {
-  background: #667eea;
+  background: #2563eb;
   color: white;
 }
 
 /* Focus styles for accessibility */
 *:focus {
-  outline: 2px solid #667eea;
+  outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
 
@@ -58,7 +58,7 @@ button:focus,
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid #667eea;
+  outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
 

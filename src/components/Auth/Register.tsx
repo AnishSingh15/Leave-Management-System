@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { UserRole } from '../../types';
 import './Auth.css';
 
 const Register: React.FC = () => {
@@ -8,6 +9,7 @@ const Register: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('employee');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -30,7 +32,7 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      await register(email, password, name);
+      await register(email, password, name, role);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
@@ -74,6 +76,20 @@ const Register: React.FC = () => {
               placeholder="Enter your email"
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="role">Role</label>
+            <select
+              id="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value as UserRole)}
+              required
+            >
+              <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
+              <option value="hr_admin">HR Admin</option>
+            </select>
           </div>
           
           <div className="form-group">
