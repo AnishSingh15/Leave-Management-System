@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /reimbursements/{userId}/{allPaths=**} {
+      // Authenticated users can upload their own bills
+      allow write: if request.auth != null && request.auth.uid == userId;
+      // Anyone authenticated can read (for managers/HR to view bills)
+      allow read: if request.auth != null;
+    }
+  }
+}

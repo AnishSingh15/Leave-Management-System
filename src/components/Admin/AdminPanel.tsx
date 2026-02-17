@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllUsers, adjustCompOffBalance, adjustAnnualLeaveBalance, updateUserRole, toggleUserStatus, getAuditLogs, updateSlackMemberId } from '../../services/userService';
 import { getAllLeaves, cancelLeaveRequest } from '../../services/leaveService';
-import { User, UserRole, LeaveRequest, AuditLog } from '../../types';
+import { getAllReimbursements } from '../../services/reimbursementService';
+import { User, UserRole, LeaveRequest, AuditLog, ReimbursementRequest } from '../../types';
 import { format } from 'date-fns';
 import './AdminPanel.css';
 
-type TabType = 'users' | 'leaves' | 'audit';
+type TabType = 'users' | 'leaves' | 'reimbursements' | 'audit';
 
 const AdminPanel: React.FC = () => {
   const { userData } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [reimbursements, setReimbursements] = useState<ReimbursementRequest[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -25,6 +27,7 @@ const AdminPanel: React.FC = () => {
   const [slackId, setSlackId] = useState('');
   const [error, setError] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [viewImage, setViewImage] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -35,6 +38,9 @@ const AdminPanel: React.FC = () => {
       } else if (activeTab === 'leaves') {
         const leavesData = await getAllLeaves();
         setLeaves(leavesData);
+      } else if (activeTab === 'reimbursements') {
+        const reimbData = await getAllReimbursements();
+        setReimbursements(reimbData);
       } else if (activeTab === 'audit') {
         const logsData = await getAuditLogs();
         setAuditLogs(logsData);
@@ -227,6 +233,12 @@ const AdminPanel: React.FC = () => {
           All Leaves
         </button>
         <button
+          className={`tab ${activeTab === 'reimbursements' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reimbursements')}
+        >
+          Reimbursements
+        </button>
+        <button
           className={`tab ${activeTab === 'audit' ? 'active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
@@ -367,6 +379,79 @@ const AdminPanel: React.FC = () => {
                             </button>
                           )}
                         </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Reimbursements Tab */}
+            {activeTab === 'reimbursements' && (
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Items</th>
+                      <th>Total Amount</th>
+                      <th>Manager</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th>Manager Comment</th>
+                      <th>HR Comment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reimbursements.map((req) => (
+                      <tr key={req.id}>
+                        <td>{req.employeeName}</td>
+                        <td>
+                          {req.items.map((item, idx) => (
+                            <div key={idx} style={{ fontSize: '0.85rem', marginBottom: '4px' }}>
+                              {item.name} — ₹{item.amount.toFixed(2)}
+                              <div style={{ display: 'inline-flex', marginLeft: '6px', gap: '4px' }}>
+                                {item.billUrls.map((url, bIdx) => (
+                                  <button
+                                    key={bIdx}
+                                    type="button"
+                                    onClick={() => setViewImage(url)}
+                                    title="Click to view full size"
+                                    style={{
+                                      background: 'none',
+                                      border: '1px solid #e5e7eb',
+                                      borderRadius: '4px',
+                                      padding: 0,
+                                      cursor: 'pointer',
+                                      overflow: 'hidden'
+                                    }}
+                                  >
+                                    <img 
+                                      src={url} 
+                                      alt={`Bill ${bIdx + 1}`} 
+                                      style={{
+                                        width: '30px', 
+                                        height: '30px', 
+                                        objectFit: 'cover', 
+                                        display: 'block'
+                                      }}
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </td>
+                        <td><strong>₹{req.totalAmount.toFixed(2)}</strong></td>
+                        <td>{req.managerName}</td>
+                        <td>
+                          <span className={getStatusClass(req.status)}>
+                            {formatStatus(req.status)}
+                          </span>
+                        </td>
+                        <td>{format(new Date(req.createdAt), 'MMM dd, yyyy')}</td>
+                        <td>{req.managerComment || '—'}</td>
+                        <td>{req.hrComment || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -554,6 +639,62 @@ const AdminPanel: React.FC = () => {
                 {processing ? 'Saving...' : 'Save Slack ID'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewImage && (
+        <div
+          className="modal-overlay"
+          style={{ zIndex: 10000 }}
+          onClick={() => setViewImage(null)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '0.5rem',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.4)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setViewImage(null)}
+              style={{
+                position: 'absolute',
+                top: '-12px',
+                right: '-12px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                fontSize: '1rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1
+              }}
+            >
+              ✕
+            </button>
+            <img
+              src={viewImage}
+              alt="Bill"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '85vh',
+                display: 'block',
+                borderRadius: '8px'
+              }}
+            />
           </div>
         </div>
       )}

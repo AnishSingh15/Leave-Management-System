@@ -10,6 +10,9 @@ import LeaveForm from './components/Leave/LeaveForm';
 import LeaveHistory from './components/Leave/LeaveHistory';
 import Approvals from './components/Approvals/Approvals';
 import AdminPanel from './components/Admin/AdminPanel';
+import MarkAttendance from './components/Attendance/MarkAttendance';
+import AttendanceReport from './components/Attendance/AttendanceReport';
+import Reimbursement from './components/Reimbursement/Reimbursement';
 import './App.css';
 
 // Protected Route wrapper
@@ -118,6 +121,22 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/attendance"
+        element={
+          <ProtectedRoute>
+            <MarkAttendance />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reimbursement"
+        element={
+          <ProtectedRoute>
+            <Reimbursement />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Manager/HR Routes */}
       <Route
@@ -126,6 +145,17 @@ const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <ManagerRoute>
               <Approvals />
+            </ManagerRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/attendance-report"
+        element={
+          <ProtectedRoute>
+            <ManagerRoute>
+              <AttendanceReport />
             </ManagerRoute>
           </ProtectedRoute>
         }

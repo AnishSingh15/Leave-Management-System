@@ -46,12 +46,15 @@ export const getActiveEmployees = async (): Promise<User[]> => {
 export const getManagers = async (): Promise<User[]> => {
   const q = query(
     collection(db, 'users'),
-    where('role', 'in', ['manager', 'hr_admin']),
-    where('isActive', '==', true),
-    orderBy('name')
+    where('isActive', '==', true)
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(convertUserDoc);
+  const allUsers = snapshot.docs.map(convertUserDoc);
+  
+  // Filter for managers and hr_admin, then sort by name
+  return allUsers
+    .filter(user => user.role === 'manager' || user.role === 'hr_admin')
+    .sort((a, b) => a.name.localeCompare(b.name));
 };
 
 // Get user by ID

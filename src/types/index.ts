@@ -108,3 +108,66 @@ export interface BalanceAdjustment {
   adjustedBy: string;
   adjustedAt: Date;
 }
+
+// Attendance status
+export type AttendanceStatus = 'clocked_in' | 'auto_logged_out';
+
+// Attendance record — one doc per user per day
+export interface AttendanceRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  date: string;                // "YYYY-MM-DD" format
+  clockInTime: Date;           // actual time user clicked "Start Working"
+  clockOutTime: Date;          // always 7:00 PM IST
+  status: AttendanceStatus;
+  isMissedClockIn?: boolean;   // true if created from approved missed clock-in
+  createdAt: Date;
+}
+
+// Missed clock-in request status
+export type MissedClockInStatus = 'pending' | 'approved' | 'rejected';
+
+// Missed clock-in request
+export interface MissedClockInRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  date: string;               // "YYYY-MM-DD" — the date they missed
+  reason?: string;            // optional now
+  managerId: string;
+  managerName: string;
+  status: MissedClockInStatus;
+  managerComment: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================
+// Reimbursement Types
+// ============================
+
+export type ReimbursementStatus = 'pending' | 'approved' | 'rejected';
+
+// A single reimbursement item (name + bill images)
+export interface ReimbursementItem {
+  name: string;               // e.g. "Cab fare", "Hotel stay"
+  amount: number;             // amount for this item
+  billUrls: string[];         // URLs of uploaded bill images (1-2)
+}
+
+// Full reimbursement request
+export interface ReimbursementRequest {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  items: ReimbursementItem[];
+  totalAmount: number;
+  managerId: string;
+  managerName: string;
+  status: ReimbursementStatus;
+  managerComment: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

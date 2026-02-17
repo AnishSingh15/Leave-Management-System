@@ -11,39 +11,44 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
 
-  // Real-time listener for pending approval count
+  // Real-time listener for pending approval count (leaves + missed clock-ins + reimbursements)
   useEffect(() => {
     if (!userData || (!isManager && !isHRAdmin)) {
       setPendingCount(0);
       return;
     }
 
-    const queries: (() => void)[] = [];
+    const unsubscribes: (() => void)[] = [];
+    const counts = { leaves: 0, missed: 0, reimb: 0 };
+    const updateTotal = () => setPendingCount(counts.leaves + counts.missed + counts.reimb);
 
     if (isHRAdmin) {
-      // HR sees pending_hr requests
-      const q = query(
-        collection(db, 'leaves'),
-        where('status', '==', 'pending_hr')
-      );
-      const unsub = onSnapshot(q, (snap) => {
-        setPendingCount(snap.size);
-      });
-      queries.push(unsub);
+      // HR: pending_hr leaves
+      const lq = query(collection(db, 'leaves'), where('status', '==', 'pending_hr'));
+      unsubscribes.push(onSnapshot(lq, (snap) => { counts.leaves = snap.size; updateTotal(); }));
+
+      // HR: all pending missed clock-ins
+      const mq = query(collection(db, 'missedClockIns'), where('status', '==', 'pending'));
+      unsubscribes.push(onSnapshot(mq, (snap) => { counts.missed = snap.size; updateTotal(); }));
+
+      // HR: reimbursements approved by manager, pending HR approval
+      const rq = query(collection(db, 'reimbursements'), where('status', '==', 'pending_hr'));
+      unsubscribes.push(onSnapshot(rq, (snap) => { counts.reimb = snap.size; updateTotal(); }));
     } else if (isManager) {
-      // Manager sees pending_manager requests assigned to them
-      const q = query(
-        collection(db, 'leaves'),
-        where('managerId', '==', userData.uid),
-        where('status', '==', 'pending_manager')
-      );
-      const unsub = onSnapshot(q, (snap) => {
-        setPendingCount(snap.size);
-      });
-      queries.push(unsub);
+      // Manager: pending_manager leaves assigned to them
+      const lq = query(collection(db, 'leaves'), where('managerId', '==', userData.uid), where('status', '==', 'pending_manager'));
+      unsubscribes.push(onSnapshot(lq, (snap) => { counts.leaves = snap.size; updateTotal(); }));
+
+      // Manager: pending missed clock-ins assigned to them
+      const mq = query(collection(db, 'missedClockIns'), where('managerId', '==', userData.uid), where('status', '==', 'pending'));
+      unsubscribes.push(onSnapshot(mq, (snap) => { counts.missed = snap.size; updateTotal(); }));
+
+      // Manager: pending reimbursements assigned to them
+      const rq = query(collection(db, 'reimbursements'), where('managerId', '==', userData.uid), where('status', '==', 'pending'));
+      unsubscribes.push(onSnapshot(rq, (snap) => { counts.reimb = snap.size; updateTotal(); }));
     }
 
-    return () => queries.forEach((unsub) => unsub());
+    return () => unsubscribes.forEach((unsub) => unsub());
   }, [userData, isManager, isHRAdmin]);
 
   const handleLogout = async () => {
@@ -60,32 +65,46 @@ const Navbar: React.FC = () => {
           <h1>LAMS</h1>
         </Link>
       </div>
-      
+
       <div className="navbar-menu">
-        <Link 
-          to="/dashboard" 
+        <Link
+          to="/dashboard"
           className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
         >
           Dashboard
         </Link>
-        
-        <Link 
-          to="/apply-leave" 
+
+        <Link
+          to="/apply-leave"
           className={`nav-link ${isActive('/apply-leave') ? 'active' : ''}`}
         >
           Apply Leave/Extra work/WFh
         </Link>
-        
-        <Link 
-          to="/my-leaves" 
+
+        <Link
+          to="/my-leaves"
           className={`nav-link ${isActive('/my-leaves') ? 'active' : ''}`}
         >
           My Leaves
         </Link>
-        
+
+        <Link
+          to="/attendance"
+          className={`nav-link ${isActive('/attendance') ? 'active' : ''}`}
+        >
+          Attendance
+        </Link>
+
+        <Link
+          to="/reimbursement"
+          className={`nav-link ${isActive('/reimbursement') ? 'active' : ''}`}
+        >
+          Reimbursement
+        </Link>
+
         {(isManager || isHRAdmin) && (
-          <Link 
-            to="/approvals" 
+          <Link
+            to="/approvals"
             className={`nav-link ${isActive('/approvals') ? 'active' : ''}`}
           >
             Approvals
@@ -94,17 +113,26 @@ const Navbar: React.FC = () => {
             )}
           </Link>
         )}
-        
+
+        {(isManager || isHRAdmin) && (
+          <Link
+            to="/attendance-report"
+            className={`nav-link ${isActive('/attendance-report') ? 'active' : ''}`}
+          >
+            Attendance Report
+          </Link>
+        )}
+
         {isManager && (
-          <Link 
-            to="/admin" 
+          <Link
+            to="/admin"
             className={`nav-link ${isActive('/admin') ? 'active' : ''}`}
           >
             Admin
           </Link>
         )}
       </div>
-      
+
       <div className="navbar-user">
         <div className="user-info">
           <span className="user-name">{userData?.name}</span>

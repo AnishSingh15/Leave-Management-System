@@ -1,0 +1,135 @@
+.attendance-report {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Controls: date picker + stats */
+.report-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.date-picker-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.date-picker-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.date-picker-group input[type="date"] {
+    padding: 10px 16px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 1rem;
+    color: #1e293b;
+    background: white;
+    transition: border-color 0.2s;
+}
+
+.date-picker-group input[type="date"]:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Stats row */
+.report-stats {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.report-stat {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    min-width: 90px;
+}
+
+.report-stat.present {
+    border-left: 4px solid #22c55e;
+}
+
+.report-stat.absent {
+    border-left: 4px solid #ef4444;
+}
+
+.report-stat.total {
+    border-left: 4px solid #2563eb;
+}
+
+.report-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.report-stat-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+/* Report sections */
+.report-section {
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.report-section .card-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.absent-row td {
+    color: #6b7280;
+}
+
+.missed-tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.absent-row {
+    opacity: 0.85;
+}
+
+@media (max-width: 768px) {
+    .report-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .report-stats {
+        justify-content: space-between;
+    }
+
+    .report-stat {
+        flex: 1;
+        padding: 10px 12px;
+        min-width: auto;
+    }
+}

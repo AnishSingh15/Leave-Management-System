@@ -67,14 +67,13 @@ service cloud.firestore {
         request.resource.data.employeeId == request.auth.uid &&
         request.resource.data.status == 'pending_manager';
       
-      // Manager can update leaves assigned to them (approve/reject to pending_hr or rejected)
+      // Manager can update leaves assigned to them (approve/reject)
       // HR Admin can update any leave
       allow update: if isAuthenticated() && (
-        // Manager approval
+        // Manager approval/rejection
         (resource.data.managerId == request.auth.uid &&
           resource.data.status == 'pending_manager' &&
-          (request.resource.data.status == 'pending_hr' || request.resource.data.status == 'rejected') &&
-          request.resource.data.managerComment != '') ||
+          (request.resource.data.status == 'pending_hr' || request.resource.data.status == 'rejected')) ||
         // HR Admin can do anything
         isHRAdmin()
       );
@@ -93,6 +92,53 @@ service cloud.firestore {
       
       // No one can update or delete audit logs
       allow update, delete: if false;
+    }
+
+    // Attendance collection
+    match /attendance/{attendanceId} {
+      // Any authenticated user can read attendance
+      allow read: if isAuthenticated();
+
+      // Users can create their own attendance record; Managers can create when approving missed clock-ins
+      allow create: if isAuthenticated() && (
+        request.resource.data.employeeId == request.auth.uid ||
+        isManager()
+      );
+
+      // Managers and HR Admin can update attendance
+      allow update, delete: if isManager();
+    }
+
+    // Missed Clock-In Requests
+    match /missedClockIns/{requestId} {
+      // Any authenticated user can read missed clock-in requests
+      allow read: if isAuthenticated();
+
+      // Employees can create their own missed clock-in requests
+      allow create: if isAuthenticated() &&
+        request.resource.data.employeeId == request.auth.uid;
+
+      // Managers/HR can update (approve/reject)
+      allow update: if isManager();
+
+      // Only HR Admin can delete
+      allow delete: if isHRAdmin();
+    }
+
+    // Reimbursement Requests
+    match /reimbursements/{requestId} {
+      // Any authenticated user can read reimbursement requests
+      allow read: if isAuthenticated();
+
+      // Employees can create their own reimbursement requests
+      allow create: if isAuthenticated() &&
+        request.resource.data.employeeId == request.auth.uid;
+
+      // Managers/HR can update (approve/reject)
+      allow update: if isManager();
+
+      // Only HR Admin can delete
+      allow delete: if isHRAdmin();
     }
   }
 }
