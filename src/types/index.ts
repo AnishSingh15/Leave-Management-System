@@ -147,7 +147,7 @@ export interface MissedClockInRequest {
 // Reimbursement Types
 // ============================
 
-export type ReimbursementStatus = 'pending' | 'approved' | 'rejected';
+export type ReimbursementStatus = 'pending' | 'pending_hr' | 'approved' | 'rejected';
 
 // A single reimbursement item (name + bill images)
 export interface ReimbursementItem {
@@ -168,6 +168,7 @@ export interface ReimbursementRequest {
   managerName: string;
   status: ReimbursementStatus;
   managerComment: string;
+  hrComment: string;
   createdAt: Date;
   updatedAt: Date;
 }
