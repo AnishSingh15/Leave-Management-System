@@ -2,7 +2,7 @@
 export type UserRole = 'employee' | 'manager' | 'hr_admin';
 
 // Leave types
-export type LeaveType = 'casual' | 'paid' | 'sick' | 'comp_off' | 'wfh' | 'extra_work';
+export type LeaveType = 'casual' | 'paid' | 'sick' | 'comp_off' | 'wfh' | 'extra_work' | 'menstrual' | 'bereavement';
 
 // Leave status
 export type LeaveStatus = 'pending_manager' | 'pending_hr' | 'approved' | 'rejected' | 'cancelled';

@@ -75,7 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       name,
       email,
       role,
-      annualLeaveBalance: 14,
+      annualLeaveBalance: 20,
       compOffBalance: 0,
       isActive: true,
       createdAt: new Date(),

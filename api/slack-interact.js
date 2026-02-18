@@ -258,8 +258,8 @@ export default async function handler(req, res) {
           if (!freshLeave.exists()) throw new Error('Leave not found');
           const ld = freshLeave.data();
 
-          // WFH — no deduction
-          if (ld.leaveType === 'wfh') {
+          // WFH, Menstrual, Bereavement — no deduction
+          if (['wfh', 'menstrual', 'bereavement'].includes(ld.leaveType)) {
             transaction.update(leaveRef, {
               status: 'approved',
               hrComment: comment,

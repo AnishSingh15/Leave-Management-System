@@ -68,13 +68,48 @@ export const submitLeaveRequest = async (
 ): Promise<string> => {
   const totalDays = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
   
-  // Validate leave balance (skip for WFH and Saturday Work)
-  if (formData.leaveType !== 'wfh' && formData.leaveType !== 'extra_work') {
+  // Validate leave balance (skip for WFH, Saturday Work, Menstrual, and Bereavement)
+  if (['wfh', 'extra_work', 'menstrual', 'bereavement'].indexOf(formData.leaveType) === -1) {
     const availableCompOff = formData.useCompOff ? employee.compOffBalance : 0;
     const availableAnnual = formData.useAnnualLeave ? employee.annualLeaveBalance : 0;
     
     if (availableCompOff + availableAnnual < totalDays) {
       throw new Error('Insufficient leave balance for the selected leave sources');
+    }
+  }
+
+  // Menstrual leave validation: only 1 per month
+  if (formData.leaveType === 'menstrual') {
+    // Force endDate = startDate (1 day only)
+    formData.endDate = formData.startDate;
+
+    const startOfMonth = new Date(formData.startDate);
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+    
+    // Query only by employeeId to avoid composite index requirement
+    // Filter leaveType, startDate range, and status all in-memory
+    const q = query(
+      collection(db, 'leaves'),
+      where('employeeId', '==', employee.uid)
+    );
+
+    const snapshot = await getDocs(q);
+    const active = snapshot.docs.filter(d => {
+      const data = d.data();
+      const start = data.startDate?.toDate ? data.startDate.toDate() : new Date(data.startDate);
+      return (
+        data.leaveType === 'menstrual' &&
+        ['approved', 'pending_manager', 'pending_hr'].includes(data.status) &&
+        start >= startOfMonth &&
+        start < endOfMonth
+      );
+    });
+    if (active.length > 0) {
+      throw new Error('You have already applied for Menstrual Leave this month.');
     }
   }
 
@@ -394,14 +429,16 @@ export const hrApproval = async (
       hrOverrideDetails = `HR Override: Comp Off = ${compOffUsed}, Annual Leave = ${annualLeaveUsed}`;
     } else {
       // Standard deduction logic based on employee selection
-      if (leaveData.selectedSources.compOff && employee.compOffBalance > 0) {
-        compOffUsed = Math.min(employee.compOffBalance, remainingDays);
-        remainingDays -= compOffUsed;
-      }
-      
-      if (leaveData.selectedSources.annualLeave && remainingDays > 0) {
-        annualLeaveUsed = Math.min(employee.annualLeaveBalance, remainingDays);
-        remainingDays -= annualLeaveUsed;
+      if (['menstrual', 'bereavement'].indexOf(leaveData.leaveType) === -1) {
+        if (leaveData.selectedSources.compOff && employee.compOffBalance > 0) {
+          compOffUsed = Math.min(employee.compOffBalance, remainingDays);
+          remainingDays -= compOffUsed;
+        }
+        
+        if (leaveData.selectedSources.annualLeave && remainingDays > 0) {
+          annualLeaveUsed = Math.min(employee.annualLeaveBalance, remainingDays);
+          remainingDays -= annualLeaveUsed;
+        }
       }
     }
 

@@ -56,6 +56,13 @@ const LeaveForm: React.FC = () => {
     }
   }, [userData]);
 
+  // When menstrual is selected, auto-sync endDate to startDate
+  useEffect(() => {
+    if (formData.leaveType === 'menstrual' && formData.startDate) {
+      setFormData(prev => ({ ...prev, endDate: prev.startDate, isHalfDay: false }));
+    }
+  }, [formData.leaveType, formData.startDate]);
+
   // Calculate total days when dates change
   useEffect(() => {
     if (formData.startDate && formData.endDate) {
@@ -156,7 +163,9 @@ const LeaveForm: React.FC = () => {
 
   const isWFH = formData.leaveType === 'wfh';
   const isExtraWork = formData.leaveType === 'extra_work';
-  const noDeduction = isWFH || isExtraWork;
+  const isMenstrual = formData.leaveType === 'menstrual';
+  const isBereavement = formData.leaveType === 'bereavement';
+  const noDeduction = isWFH || isExtraWork || isMenstrual || isBereavement;
   const compOffDisabled = !userData?.compOffBalance || userData.compOffBalance <= 0;
   const annualLeaveDisabled = !userData?.annualLeaveBalance || userData.annualLeaveBalance <= 0;
 
@@ -194,7 +203,7 @@ const LeaveForm: React.FC = () => {
         <div className="balance-summary">
           <div className="balance-item">
             <span className="balance-label">Annual Leave:</span>
-            <span className="balance-value">{userData?.annualLeaveBalance || 0} / 14 days</span>
+            <span className="balance-value">{userData?.annualLeaveBalance || 0} / 20 days</span>
           </div>
           <div className="balance-item">
             <span className="balance-label">Comp Off:</span>
@@ -222,6 +231,8 @@ const LeaveForm: React.FC = () => {
                 <option value="comp_off">Comp Off Usage</option>
                 <option value="wfh">Work From Home</option>
                 <option value="extra_work">Extra Day Work — Weekend / Holiday (Earn Comp Off)</option>
+                <option value="menstrual">Menstrual Leave (Monthly 1 day)</option>
+                <option value="bereavement">Bereavement Leave (Yearly)</option>
               </select>
             </div>
 
@@ -246,7 +257,7 @@ const LeaveForm: React.FC = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="startDate">Start Date *</label>
+              <label htmlFor="startDate">{isMenstrual ? 'Date *' : 'Start Date *'}</label>
               <input
                 type="date"
                 id="startDate"
@@ -258,39 +269,42 @@ const LeaveForm: React.FC = () => {
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="endDate">End Date *</label>
-              <input
-                type="date"
-                id="endDate"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-                min={formData.startDate || new Date().toISOString().split('T')[0]}
-                required
-              />
-            </div>
+            {!isMenstrual && (
+              <div className="form-group">
+                <label htmlFor="endDate">End Date *</label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  min={formData.startDate || new Date().toISOString().split('T')[0]}
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <div className="form-row">
             <div className="form-group">
               <label>Total Days</label>
               <div className="total-days-display">
-                {totalDays} {totalDays === 1 ? 'day' : 'days'}
-                {formData.isHalfDay && ' (Half Day)'}
+                {isMenstrual ? '1 day' : `${totalDays} ${totalDays === 1 ? 'day' : 'days'}${formData.isHalfDay ? ' (Half Day)' : ''}`}
               </div>
             </div>
 
-            <div className="form-group checkbox-inline">
-              <input
-                type="checkbox"
-                id="isHalfDay"
-                name="isHalfDay"
-                checked={formData.isHalfDay}
-                onChange={handleChange}
-              />
-              <label htmlFor="isHalfDay">Half Day</label>
-            </div>
+            {!isMenstrual && (
+              <div className="form-group checkbox-inline">
+                <input
+                  type="checkbox"
+                  id="isHalfDay"
+                  name="isHalfDay"
+                  checked={formData.isHalfDay}
+                  onChange={handleChange}
+                />
+                <label htmlFor="isHalfDay">Half Day</label>
+              </div>
+            )}
           </div>
 
           {!noDeduction && (

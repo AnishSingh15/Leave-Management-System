@@ -40,7 +40,9 @@ const LeaveHistory: React.FC = () => {
       sick: 'Sick Leave',
       comp_off: 'Comp Off',
       wfh: 'WFH',
-      extra_work: 'Extra Day Work'
+      extra_work: 'Extra Day Work',
+      menstrual: 'Menstrual Leave',
+      bereavement: 'Bereavement Leave'
     };
     return types[type] || type.replace(/_/g, ' ').toUpperCase();
   };

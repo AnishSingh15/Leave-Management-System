@@ -211,6 +211,20 @@ const AdminPanel: React.FC = () => {
   const getStatusClass = (status: string) => `status-badge ${status}`;
   const formatStatus = (status: string) => 
     status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+  const formatLeaveType = (type: string) => {
+    const types: Record<string, string> = {
+      casual: 'Casual Leave',
+      paid: 'Paid Leave',
+      sick: 'Sick Leave',
+      comp_off: 'Comp Off',
+      wfh: 'WFH',
+      extra_work: 'Extra Day Work',
+      menstrual: 'Menstrual Leave',
+      bereavement: 'Bereavement Leave'
+    };
+    return types[type] || type.replace(/_/g, ' ').toUpperCase();
+  };
 
   return (
     <div className="admin-panel">
@@ -277,7 +291,7 @@ const AdminPanel: React.FC = () => {
                             {user.role.replace('_', ' ').toUpperCase()}
                           </span>
                         </td>
-                        <td>{user.annualLeaveBalance} / 14</td>
+                        <td>{user.annualLeaveBalance} / 20</td>
                         <td>{user.compOffBalance}</td>
                         <td>
                           <span className={`status-indicator ${user.isActive ? 'active' : 'inactive'}`}>
@@ -354,7 +368,7 @@ const AdminPanel: React.FC = () => {
                     {leaves.map((leave) => (
                       <tr key={leave.id}>
                         <td>{leave.employeeName}</td>
-                        <td>{leave.leaveType.replace(/_/g, ' ').toUpperCase()}</td>
+                        <td>{formatLeaveType(leave.leaveType)}</td>
                         <td>
                           {format(new Date(leave.startDate), 'MMM dd')} - {format(new Date(leave.endDate), 'MMM dd, yyyy')}
                         </td>
@@ -509,7 +523,7 @@ const AdminPanel: React.FC = () => {
                 <p><strong>Current Balance:</strong> {
                   modalType === 'compOff' 
                     ? `${selectedUser.compOffBalance} days`
-                    : `${selectedUser.annualLeaveBalance} / 14 days`
+                    : `${selectedUser.annualLeaveBalance} / 20 days`
                 }</p>
               </div>
 

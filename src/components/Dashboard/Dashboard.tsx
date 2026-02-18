@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getEmployeeLeaves } from '../../services/leaveService';
 import { LeaveRequest } from '../../types';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import LeaveCalendar from '../Calendar/LeaveCalendar';
 import './Dashboard.css';
 
@@ -10,6 +10,7 @@ const Dashboard: React.FC = () => {
   const { userData } = useAuth();
   const [recentLeaves, setRecentLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [menstrualTaken, setMenstrualTaken] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -17,6 +18,19 @@ const Dashboard: React.FC = () => {
         try {
           const leaves = await getEmployeeLeaves(userData.uid);
           setRecentLeaves(leaves.slice(0, 5));
+
+          // Check for menstrual leave in current month
+          const today = new Date();
+          const start = startOfMonth(today);
+          const end = endOfMonth(today);
+          
+          const hasMenstrual = leaves.some(l => 
+            l.leaveType === 'menstrual' && 
+            ['approved', 'pending_manager', 'pending_hr'].includes(l.status) &&
+            new Date(l.startDate) >= start &&
+            new Date(l.startDate) <= end
+          );
+          setMenstrualTaken(hasMenstrual);
         } catch (error) {
           console.error('Error fetching leaves:', error);
         } finally {
@@ -36,6 +50,20 @@ const Dashboard: React.FC = () => {
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatLeaveType = (type: string) => {
+    const types: Record<string, string> = {
+      casual: 'Casual Leave',
+      paid: 'Paid Leave',
+      sick: 'Sick Leave',
+      comp_off: 'Comp Off',
+      wfh: 'WFH',
+      extra_work: 'Extra Day Work',
+      menstrual: 'Menstrual Leave',
+      bereavement: 'Bereavement Leave'
+    };
+    return types[type] || type.replace(/_/g, ' ').toUpperCase();
+  };
+
   const pendingCount = recentLeaves.filter(
     l => l.status === 'pending_manager' || l.status === 'pending_hr'
   ).length;
@@ -52,7 +80,7 @@ const Dashboard: React.FC = () => {
       <div className="stats-grid">
         <div className="stat-card primary">
           <div className="stat-value">{userData?.annualLeaveBalance || 0}</div>
-          <div className="stat-label">Annual Leave Balance (of 14)</div>
+          <div className="stat-label">Annual Leave Balance (of 20)</div>
         </div>
         
         <div className="stat-card success">
@@ -68,6 +96,13 @@ const Dashboard: React.FC = () => {
         <div className="stat-card info">
           <div className="stat-value">{approvedCount}</div>
           <div className="stat-label">Approved This Year</div>
+        </div>
+        
+        <div className="stat-card" style={{ background: '#fdf4ff', borderLeft: '4px solid #d946ef' }}>
+          <div className="stat-value" style={{ color: '#d946ef' }}>
+            {menstrualTaken ? 'Taken' : 'Available'}
+          </div>
+          <div className="stat-label" style={{ color: '#86198f' }}>Menstrual Leave ({format(new Date(), 'MMMM')})</div>
         </div>
       </div>
 
@@ -98,7 +133,7 @@ const Dashboard: React.FC = () => {
               <tbody>
                 {recentLeaves.map((leave) => (
                   <tr key={leave.id}>
-                    <td>{leave.leaveType.replace(/_/g, ' ').toUpperCase()}</td>
+                    <td>{formatLeaveType(leave.leaveType)}</td>
                     <td>
                       {format(new Date(leave.startDate), 'MMM dd, yyyy')} - {format(new Date(leave.endDate), 'MMM dd, yyyy')}
                     </td>
