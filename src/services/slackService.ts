@@ -92,7 +92,7 @@ export const sendSlackNotification = async (notification: SlackNotification): Pr
         elements: [
           {
             type: 'mrkdwn',
-            text: `LAMS  •  ${new Date(notification.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`
+            text: `Leave Portal  •  ${new Date(notification.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`
           }
         ]
       },
@@ -155,7 +155,7 @@ export const buildManagerDecisionMessage = (
 ): string => {
   const emoji = approved ? '👍' : '👎';
   const decision = approved ? 'Approved by Manager' : 'Rejected by Manager';
-  
+
   return `
 ${emoji} *Leave Request ${decision}*
 
@@ -180,7 +180,7 @@ export const buildHRDecisionMessage = (
 ): string => {
   const emoji = approved ? '✅' : '❌';
   const decision = approved ? 'Approved by HR' : 'Rejected by HR';
-  
+
   let message = `
 ${emoji} *Leave Request ${decision}*
 

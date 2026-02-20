@@ -30,15 +30,15 @@ const Login: React.FC = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>LAMS</h1>
+          <h1>Leave Portal</h1>
           <p>Leave & Attendance Management System</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="auth-form">
           <h2>Sign In</h2>
-          
+
           {error && <div className="auth-error">{error}</div>}
-          
+
           <div className="form-group">
             <label htmlFor="email">Email</label>
             <input
@@ -50,7 +50,7 @@ const Login: React.FC = () => {
               required
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
@@ -62,7 +62,7 @@ const Login: React.FC = () => {
               required
             />
           </div>
-          
+
           <button type="submit" className="auth-button" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -70,7 +70,7 @@ const Login: React.FC = () => {
           <p className="auth-link forgot-link">
             <Link to="/forgot-password">Forgot Password?</Link>
           </p>
-          
+
           <p className="auth-link">
             Don't have an account? <Link to="/register">Register</Link>
           </p>

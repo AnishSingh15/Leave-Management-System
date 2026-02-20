@@ -38,7 +38,7 @@ const ForgotPassword: React.FC = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>LAMS</h1>
+          <h1>Leave Portal</h1>
           <p>Leave & Attendance Management System</p>
         </div>
 

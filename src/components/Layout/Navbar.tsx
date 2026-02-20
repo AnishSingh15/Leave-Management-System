@@ -62,7 +62,7 @@ const Navbar: React.FC = () => {
     <nav className="navbar">
       <div className="navbar-brand">
         <Link to="/dashboard">
-          <h1>LAMS</h1>
+          <h1>Leave Portal</h1>
         </Link>
       </div>
 
@@ -88,12 +88,12 @@ const Navbar: React.FC = () => {
           My Leaves
         </Link>
 
-        <Link
+        {/* <Link
           to="/attendance"
           className={`nav-link ${isActive('/attendance') ? 'active' : ''}`}
         >
           Attendance
-        </Link>
+        </Link> */}
 
         <Link
           to="/reimbursement"
