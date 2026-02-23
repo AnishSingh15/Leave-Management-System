@@ -46,7 +46,7 @@ export const calculateLeaveDays = (startDate: string, endDate: string, isHalfDay
   const start = new Date(startDate);
   const end = new Date(endDate);
   let days = 0;
-  
+
   const current = new Date(start);
   while (current <= end) {
     const dayOfWeek = current.getDay();
@@ -56,7 +56,7 @@ export const calculateLeaveDays = (startDate: string, endDate: string, isHalfDay
     }
     current.setDate(current.getDate() + 1);
   }
-  
+
   return isHalfDay ? 0.5 : days;
 };
 
@@ -67,12 +67,12 @@ export const submitLeaveRequest = async (
   manager: User
 ): Promise<string> => {
   const totalDays = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
-  
+
   // Validate leave balance (skip for WFH, Saturday Work, Menstrual, and Bereavement)
   if (['wfh', 'extra_work', 'menstrual', 'bereavement'].indexOf(formData.leaveType) === -1) {
     const availableCompOff = formData.useCompOff ? employee.compOffBalance : 0;
     const availableAnnual = formData.useAnnualLeave ? employee.annualLeaveBalance : 0;
-    
+
     if (availableCompOff + availableAnnual < totalDays) {
       throw new Error('Insufficient leave balance for the selected leave sources');
     }
@@ -86,10 +86,10 @@ export const submitLeaveRequest = async (
     const startOfMonth = new Date(formData.startDate);
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
-    
+
     const endOfMonth = new Date(startOfMonth);
     endOfMonth.setMonth(endOfMonth.getMonth() + 1);
-    
+
     // Query only by employeeId to avoid composite index requirement
     // Filter leaveType, startDate range, and status all in-memory
     const q = query(
@@ -172,7 +172,7 @@ export const getEmployeeLeaves = async (employeeId: string): Promise<LeaveReques
     where('employeeId', '==', employeeId),
     orderBy('createdAt', 'desc')
   );
-  
+
   const snapshot = await getDocs(q);
   return snapshot.docs.map(convertLeaveDoc);
 };
@@ -185,7 +185,7 @@ export const getManagerPendingLeaves = async (managerId: string): Promise<LeaveR
     where('status', '==', 'pending_manager'),
     orderBy('createdAt', 'desc')
   );
-  
+
   const snapshot = await getDocs(q);
   return snapshot.docs.map(convertLeaveDoc);
 };
@@ -197,7 +197,7 @@ export const getHRPendingLeaves = async (): Promise<LeaveRequest[]> => {
     where('status', '==', 'pending_hr'),
     orderBy('createdAt', 'desc')
   );
-  
+
   const snapshot = await getDocs(q);
   return snapshot.docs.map(convertLeaveDoc);
 };
@@ -208,9 +208,34 @@ export const getAllLeaves = async (): Promise<LeaveRequest[]> => {
     collection(db, 'leaves'),
     orderBy('createdAt', 'desc')
   );
-  
+
   const snapshot = await getDocs(q);
   return snapshot.docs.map(convertLeaveDoc);
+};
+
+// Get manager leave history
+export const getManagerLeaveHistory = async (managerId: string): Promise<LeaveRequest[]> => {
+  const q = query(
+    collection(db, 'leaves'),
+    where('managerId', '==', managerId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs
+    .map(convertLeaveDoc)
+    .filter(leave => leave.status !== 'pending_manager')
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+};
+
+// Get HR leave history
+export const getHRLeaveHistory = async (): Promise<LeaveRequest[]> => {
+  const q = query(
+    collection(db, 'leaves'),
+    where('status', 'in', ['approved', 'rejected', 'cancelled'])
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs
+    .map(convertLeaveDoc)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 };
 
 // Manager approval/rejection
@@ -222,7 +247,7 @@ export const managerDecision = async (
 ): Promise<void> => {
   const leaveRef = doc(db, 'leaves', leaveId);
   const leaveDoc = await getDoc(leaveRef);
-  
+
   if (!leaveDoc.exists()) {
     throw new Error('Leave request not found');
   }
@@ -304,13 +329,13 @@ export const hrApproval = async (
   await runTransaction(db, async (transaction) => {
     const leaveRef = doc(db, 'leaves', leaveId);
     const leaveDoc = await transaction.get(leaveRef);
-    
+
     if (!leaveDoc.exists()) {
       throw new Error('Leave request not found');
     }
 
     const leaveData = convertLeaveDoc(leaveDoc);
-    
+
     if (!approved) {
       transaction.update(leaveRef, {
         status: 'rejected',
@@ -370,13 +395,13 @@ export const hrApproval = async (
     if (leaveData.leaveType === 'extra_work') {
       const employeeRef = doc(db, 'users', leaveData.employeeId);
       const employeeDoc = await transaction.get(employeeRef);
-      
+
       if (!employeeDoc.exists()) {
         throw new Error('Employee not found');
       }
 
       const employee = employeeDoc.data() as User;
-      
+
       transaction.update(employeeRef, {
         compOffBalance: employee.compOffBalance + leaveData.totalDays,
         updatedAt: serverTimestamp()
@@ -409,7 +434,7 @@ export const hrApproval = async (
     // Get employee data
     const employeeRef = doc(db, 'users', leaveData.employeeId);
     const employeeDoc = await transaction.get(employeeRef);
-    
+
     if (!employeeDoc.exists()) {
       throw new Error('Employee not found');
     }
@@ -434,7 +459,7 @@ export const hrApproval = async (
           compOffUsed = Math.min(employee.compOffBalance, remainingDays);
           remainingDays -= compOffUsed;
         }
-        
+
         if (leaveData.selectedSources.annualLeave && remainingDays > 0) {
           annualLeaveUsed = Math.min(employee.annualLeaveBalance, remainingDays);
           remainingDays -= annualLeaveUsed;
@@ -482,18 +507,18 @@ export const cancelLeaveRequest = async (leaveId: string, hrComment: string): Pr
   await runTransaction(db, async (transaction) => {
     const leaveRef = doc(db, 'leaves', leaveId);
     const leaveDoc = await transaction.get(leaveRef);
-    
+
     if (!leaveDoc.exists()) {
       throw new Error('Leave request not found');
     }
 
     const leaveData = convertLeaveDoc(leaveDoc);
-    
+
     // If leave was approved, restore the balance
     if (leaveData.status === 'approved') {
       const employeeRef = doc(db, 'users', leaveData.employeeId);
       const employeeDoc = await transaction.get(employeeRef);
-      
+
       if (employeeDoc.exists()) {
         const employee = employeeDoc.data() as User;
         transaction.update(employeeRef, {

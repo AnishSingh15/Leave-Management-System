@@ -267,6 +267,31 @@ export const getAllPendingMissedClockIns = async (): Promise<MissedClockInReques
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
+// Get manager missed clock-in history
+export const getManagerMissedClockInHistory = async (managerId: string): Promise<MissedClockInRequest[]> => {
+    const q = query(
+        collection(db, 'missedClockIns'),
+        where('managerId', '==', managerId)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+        .map(convertMissedClockInDoc)
+        .filter(req => req.status !== 'pending')
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+};
+
+// Get HR missed clock-in history
+export const getHRMissedClockInHistory = async (): Promise<MissedClockInRequest[]> => {
+    const q = query(
+        collection(db, 'missedClockIns'),
+        where('status', 'in', ['approved', 'rejected'])
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+        .map(convertMissedClockInDoc)
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+};
+
 // Get employee's own missed clock-in requests
 export const getEmployeeMissedClockIns = async (userId: string): Promise<MissedClockInRequest[]> => {
     const q = query(

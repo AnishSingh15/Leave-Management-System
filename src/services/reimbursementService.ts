@@ -116,6 +116,31 @@ export const getAllReimbursements = async (): Promise<ReimbursementRequest[]> =>
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
+// Get manager reimbursement history
+export const getManagerReimbursementHistory = async (managerId: string): Promise<ReimbursementRequest[]> => {
+    const q = query(
+        collection(db, 'reimbursements'),
+        where('managerId', '==', managerId)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+        .map(convertReimbursementDoc)
+        .filter(req => req.status !== 'pending')
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+};
+
+// Get HR reimbursement history
+export const getHRReimbursementHistory = async (): Promise<ReimbursementRequest[]> => {
+    const q = query(
+        collection(db, 'reimbursements'),
+        where('status', 'in', ['approved', 'rejected'])
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+        .map(convertReimbursementDoc)
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+};
+
 // Manager approves reimbursement → moves to pending_hr
 export const approveReimbursement = async (
     requestId: string,

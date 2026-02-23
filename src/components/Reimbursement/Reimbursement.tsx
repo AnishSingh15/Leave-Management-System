@@ -77,13 +77,13 @@ const Reimbursement: React.FC = () => {
         const existingFiles = updated[index].files;
         const existingPreviews = updated[index].previews;
 
-        // Append new files, cap at 3 total
+        // Append new files, cap at 10 total
         const newFiles = Array.from(fileList);
-        const combined = [...existingFiles, ...newFiles].slice(0, 3);
+        const combined = [...existingFiles, ...newFiles].slice(0, 10);
         const combinedPreviews = [
             ...existingPreviews,
             ...newFiles.map(f => URL.createObjectURL(f))
-        ].slice(0, 3);
+        ].slice(0, 10);
 
         updated[index].files = combined;
         updated[index].previews = combinedPreviews;
@@ -270,7 +270,7 @@ const Reimbursement: React.FC = () => {
                                 </div>
 
                                 <div className="form-group">
-                                    <label>Bill / Receipt (up to 3 images) *</label>
+                                    <label>Bill / Receipt (up to 10 images) *</label>
                                     <div className="file-upload-area">
                                         <input
                                             type="file"
@@ -281,10 +281,10 @@ const Reimbursement: React.FC = () => {
                                             className="file-input-hidden"
                                         />
                                         <label htmlFor={`file-${idx}`} className="file-upload-label">
-                                            📎 {item.files.length >= 3
-                                                ? '3/3 files attached'
+                                            📎 {item.files.length >= 10
+                                                ? '10/10 files attached'
                                                 : item.files.length > 0
-                                                    ? `${item.files.length}/3 — click to add more`
+                                                    ? `${item.files.length}/10 — click to add more`
                                                     : 'Click to attach bill images'}
                                         </label>
                                     </div>
@@ -379,9 +379,9 @@ const Reimbursement: React.FC = () => {
                                                         onClick={() => setViewImage(url)}
                                                         title="Click to view full size"
                                                     >
-                                                        <img 
-                                                            src={url} 
-                                                            alt={`Bill ${bIdx + 1}`} 
+                                                        <img
+                                                            src={url}
+                                                            alt={`Bill ${bIdx + 1}`}
                                                         />
                                                     </button>
                                                 ))}

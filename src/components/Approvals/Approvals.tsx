@@ -4,13 +4,17 @@ import {
   getManagerPendingLeaves,
   getHRPendingLeaves,
   managerDecision,
-  hrApproval
+  hrApproval,
+  getManagerLeaveHistory,
+  getHRLeaveHistory
 } from '../../services/leaveService';
 import {
   getPendingMissedClockIns,
   getAllPendingMissedClockIns,
   approveMissedClockIn,
   rejectMissedClockIn,
+  getManagerMissedClockInHistory,
+  getHRMissedClockInHistory
 } from '../../services/attendanceService';
 import {
   getPendingReimbursements,
@@ -19,6 +23,8 @@ import {
   rejectReimbursement,
   hrApproveReimbursement,
   hrRejectReimbursement,
+  getManagerReimbursementHistory,
+  getHRReimbursementHistory
 } from '../../services/reimbursementService';
 import { LeaveRequest, MissedClockInRequest, ReimbursementRequest } from '../../types';
 import { format } from 'date-fns';
@@ -29,6 +35,10 @@ const Approvals: React.FC = () => {
   const [pendingLeaves, setPendingLeaves] = useState<LeaveRequest[]>([]);
   const [missedClockIns, setMissedClockIns] = useState<MissedClockInRequest[]>([]);
   const [pendingReimbursements, setPendingReimbursements] = useState<ReimbursementRequest[]>([]);
+  const [historyLeaves, setHistoryLeaves] = useState<LeaveRequest[]>([]);
+  const [historyMissed, setHistoryMissed] = useState<MissedClockInRequest[]>([]);
+  const [historyReimbursements, setHistoryReimbursements] = useState<ReimbursementRequest[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -48,24 +58,36 @@ const Approvals: React.FC = () => {
       let leaves: LeaveRequest[];
       let missed: MissedClockInRequest[];
       let reimbs: ReimbursementRequest[];
+      let hLeaves: LeaveRequest[];
+      let hMissed: MissedClockInRequest[];
+      let hReimbs: ReimbursementRequest[];
 
       if (isHRAdmin) {
-        [leaves, missed, reimbs] = await Promise.all([
+        [leaves, missed, reimbs, hLeaves, hMissed, hReimbs] = await Promise.all([
           getHRPendingLeaves(),
           getAllPendingMissedClockIns(),
           getAllPendingReimbursements(),
+          getHRLeaveHistory(),
+          getHRMissedClockInHistory(),
+          getHRReimbursementHistory(),
         ]);
       } else {
-        [leaves, missed, reimbs] = await Promise.all([
+        [leaves, missed, reimbs, hLeaves, hMissed, hReimbs] = await Promise.all([
           getManagerPendingLeaves(userData.uid),
           getPendingMissedClockIns(userData.uid),
           getPendingReimbursements(userData.uid),
+          getManagerLeaveHistory(userData.uid),
+          getManagerMissedClockInHistory(userData.uid),
+          getManagerReimbursementHistory(userData.uid),
         ]);
       }
 
       setPendingLeaves(leaves);
       setMissedClockIns(missed);
       setPendingReimbursements(reimbs);
+      setHistoryLeaves(hLeaves);
+      setHistoryMissed(hMissed);
+      setHistoryReimbursements(hReimbs);
     } catch (error) {
       console.error('Error fetching pending data:', error);
     } finally {
@@ -416,13 +438,13 @@ const Approvals: React.FC = () => {
                                 overflow: 'hidden'
                               }}
                             >
-                              <img 
-                                src={url} 
-                                alt={`Bill ${bIdx + 1}`} 
+                              <img
+                                src={url}
+                                alt={`Bill ${bIdx + 1}`}
                                 style={{
-                                  width: '40px', 
-                                  height: '40px', 
-                                  objectFit: 'cover', 
+                                  width: '40px',
+                                  height: '40px',
+                                  objectFit: 'cover',
                                   display: 'block'
                                 }}
                               />
@@ -466,6 +488,101 @@ const Approvals: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Approval History Section */}
+      <div className="card" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+        <div
+          className="card-header"
+          style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          onClick={() => setShowHistory(!showHistory)}
+        >
+          <h2>🗄️ Approval History ({historyLeaves.length + historyMissed.length + historyReimbursements.length})</h2>
+          <span>{showHistory ? '▲ Hide' : '▼ Show'}</span>
+        </div>
+
+        {showHistory && (
+          <div className="history-section" style={{ marginTop: '1rem' }}>
+            {historyLeaves.length === 0 && historyMissed.length === 0 && historyReimbursements.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#6b7280' }}>No history available</p>
+            ) : (
+              <div className="approvals-list" style={{ opacity: 0.85 }}>
+                {historyLeaves.map(leave => (
+                  <div key={leave.id} className="approval-card" style={{ borderLeft: `4px solid ${leave.status === 'approved' ? '#10b981' : '#f43f5e'}` }}>
+                    <div className="approval-header">
+                      <div>
+                        <h3>{leave.employeeName}</h3>
+                        <span className="employee-email">Leave Request</span>
+                      </div>
+                      <span className="leave-type-badge" style={{ background: leave.status === 'approved' ? '#10b981' : '#f43f5e' }}>
+                        {leave.status.toUpperCase().replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div className="approval-body">
+                      <div className="approval-detail">
+                        <span className="label">Type</span>
+                        <span className="value">{formatLeaveType(leave.leaveType)}</span>
+                      </div>
+                      <div className="approval-detail">
+                        <span className="label">Dates</span>
+                        <span className="value">{format(new Date(leave.startDate), 'MMM dd')} - {format(new Date(leave.endDate), 'MMM dd, yyyy')}</span>
+                      </div>
+                    </div>
+                    <div className="approval-footer">
+                      <span>Updated: {format(new Date(leave.updatedAt), 'MMM dd, yyyy')}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {historyMissed.map(req => (
+                  <div key={req.id} className="approval-card" style={{ borderLeft: `4px solid ${req.status === 'approved' ? '#10b981' : '#f43f5e'}` }}>
+                    <div className="approval-header">
+                      <div>
+                        <h3>{req.employeeName}</h3>
+                        <span className="employee-email">Missed Clock-In</span>
+                      </div>
+                      <span className="leave-type-badge" style={{ background: req.status === 'approved' ? '#10b981' : '#f43f5e' }}>
+                        {req.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="approval-body">
+                      <div className="approval-detail">
+                        <span className="label">Date</span>
+                        <span className="value">{format(new Date(req.date + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}</span>
+                      </div>
+                    </div>
+                    <div className="approval-footer">
+                      <span>Updated: {format(new Date(req.updatedAt || req.createdAt), 'MMM dd, yyyy')}</span>
+                    </div>
+                  </div>
+                ))}
+
+                {historyReimbursements.map(req => (
+                  <div key={req.id} className="approval-card" style={{ borderLeft: `4px solid ${req.status === 'approved' ? '#10b981' : '#f43f5e'}` }}>
+                    <div className="approval-header">
+                      <div>
+                        <h3>{req.employeeName}</h3>
+                        <span className="employee-email">Reimbursement</span>
+                      </div>
+                      <span className="leave-type-badge" style={{ background: req.status === 'approved' ? '#10b981' : '#f43f5e' }}>
+                        {req.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="approval-body">
+                      <div className="approval-detail">
+                        <span className="label">Amount</span>
+                        <span className="value">₹{req.totalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className="approval-footer">
+                      <span>Updated: {format(new Date(req.updatedAt || req.createdAt), 'MMM dd, yyyy')}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
