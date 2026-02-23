@@ -15,8 +15,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
     
+    function isMasterAdmin() {
+      return getUserRole() == 'master_admin';
+    }
+    
     function isHRAdmin() {
-      return getUserRole() == 'hr_admin';
+      return getUserRole() == 'hr_admin' || isMasterAdmin();
     }
     
     function isManager() {
@@ -34,7 +38,10 @@ service cloud.firestore {
       
       // Users can create their own profile on registration
       allow create: if isAuthenticated() && isOwner(userId) && 
-        request.resource.data.role in ['employee', 'manager', 'hr_admin'] &&
+        (
+          request.resource.data.role in ['employee', 'manager', 'hr_admin'] ||
+          (request.resource.data.role == 'master_admin' && request.auth.token.email == 'anish15may@gmail.com')
+        ) &&
         request.resource.data.annualLeaveBalance == 20 &&
         request.resource.data.compOffBalance == 0;
       

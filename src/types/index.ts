@@ -1,5 +1,5 @@
 // User roles
-export type UserRole = 'employee' | 'manager' | 'hr_admin';
+export type UserRole = 'employee' | 'manager' | 'hr_admin' | 'master_admin';
 
 // Leave types
 export type LeaveType = 'casual' | 'paid' | 'sick' | 'comp_off' | 'wfh' | 'extra_work' | 'menstrual' | 'bereavement';
