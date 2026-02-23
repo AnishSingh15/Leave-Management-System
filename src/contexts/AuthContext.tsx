@@ -20,6 +20,7 @@ interface AuthContextType {
   isEmployee: boolean;
   isManager: boolean;
   isHRAdmin: boolean;
+  isMasterAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -109,9 +110,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  const isEmployee = userData?.role === 'employee';
-  const isManager = userData?.role === 'manager';
-  const isHRAdmin = userData?.role === 'hr_admin';
+  const isMasterAdmin = userData?.role === 'master_admin';
+  const isHRAdmin = userData?.role === 'hr_admin' || isMasterAdmin;
+  const isManager = userData?.role === 'manager' || isHRAdmin;
+  const isEmployee = userData?.role === 'employee' || isManager;
 
   const value: AuthContextType = {
     currentUser,
@@ -122,7 +124,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     isEmployee,
     isManager,
-    isHRAdmin
+    isHRAdmin,
+    isMasterAdmin
   };
 
   return (
