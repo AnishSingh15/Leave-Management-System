@@ -170,7 +170,7 @@ const Approvals: React.FC = () => {
     try {
       if (selectedLeave) {
         // Handle leave approval/rejection
-        if (isHRAdmin) {
+        if (isHRAdmin && selectedLeave.status === 'pending_hr') {
           await hrApproval(selectedLeave.id, action === 'approve', comment);
         } else {
           await managerDecision(selectedLeave.id, action === 'approve', comment, userData?.name || '');
@@ -184,7 +184,7 @@ const Approvals: React.FC = () => {
         }
       } else if (selectedReimb) {
         // Handle reimbursement approval/rejection
-        if (isHRAdmin) {
+        if (isHRAdmin && selectedReimb.status === 'pending_hr') {
           if (action === 'approve') {
             await hrApproveReimbursement(selectedReimb.id, comment);
           } else {
