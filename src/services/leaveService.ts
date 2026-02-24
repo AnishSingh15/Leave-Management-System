@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   addDoc,
-  updateDoc,
   getDoc,
   getDocs,
   query,
@@ -383,7 +382,6 @@ export const managerDecision = async (
   }
 };
 
-// HR approval with leave deduction
 export const hrApproval = async (
   leaveId: string,
   approved: boolean,
@@ -391,6 +389,12 @@ export const hrApproval = async (
   overrideCompOff?: number,
   overrideAnnualLeave?: number
 ): Promise<void> => {
+  let leaveData = null as LeaveRequest | null;
+  let employeeSlackId: string | null = null;
+  let compOffUsed = 0;
+  let annualLeaveUsed = 0;
+  let hrOverrideDetails = '';
+
   await runTransaction(db, async (transaction) => {
     const leaveRef = doc(db, 'leaves', leaveId);
     const leaveDoc = await transaction.get(leaveRef);
@@ -399,88 +403,125 @@ export const hrApproval = async (
       throw new Error('Leave request not found');
     }
 
-    const leaveData = convertLeaveDoc(leaveDoc);
+    leaveData = convertLeaveDoc(leaveDoc);
 
-    if (!approved) {
-      transaction.update(leaveRef, {
-        status: 'rejected',
-        hrComment: comment,
-        updatedAt: serverTimestamp()
-      });
+    const employeeRef = doc(db, 'users', leaveData.employeeId);
+    const employeeDoc = await transaction.get(employeeRef);
 
-      // Notify the employee of rejection via DM
-      const rejEmpRef = doc(db, 'users', leaveData.employeeId);
-      const rejEmpSnap = await transaction.get(rejEmpRef);
-      const rejTargetIds: string[] = rejEmpSnap.exists() && rejEmpSnap.data().slackMemberId
-        ? [rejEmpSnap.data().slackMemberId] : [];
+    if (employeeDoc.exists()) {
+      const empData = employeeDoc.data() as User;
+      employeeSlackId = empData.slackMemberId || null;
 
-      await sendSlackNotification({
-        employeeName: leaveData.employeeName,
-        leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
-        totalDays: leaveData.totalDays,
-        status: 'rejected',
-        hrComment: comment,
-        timestamp: new Date().toISOString(),
-        targetSlackIds: rejTargetIds
-      });
-      return;
-    }
-
-    // Skip deduction for WFH
-    if (leaveData.leaveType === 'wfh') {
-      transaction.update(leaveRef, {
-        status: 'approved',
-        hrComment: comment,
-        updatedAt: serverTimestamp()
-      });
-
-      // Notify the employee via DM
-      const wfhEmpRef = doc(db, 'users', leaveData.employeeId);
-      const wfhEmpSnap = await transaction.get(wfhEmpRef);
-      const wfhTargetIds: string[] = wfhEmpSnap.exists() && wfhEmpSnap.data().slackMemberId
-        ? [wfhEmpSnap.data().slackMemberId] : [];
-
-      await sendSlackNotification({
-        employeeName: leaveData.employeeName,
-        leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
-        totalDays: leaveData.totalDays,
-        status: 'approved',
-        hrComment: comment,
-        timestamp: new Date().toISOString(),
-        targetSlackIds: wfhTargetIds
-      });
-      return;
-    }
-
-    // Saturday Work: credit comp-off balance instead of deducting
-    if (leaveData.leaveType === 'extra_work') {
-      const employeeRef = doc(db, 'users', leaveData.employeeId);
-      const employeeDoc = await transaction.get(employeeRef);
-
-      if (!employeeDoc.exists()) {
-        throw new Error('Employee not found');
+      if (!approved) {
+        transaction.update(leaveRef, {
+          status: 'rejected',
+          hrComment: comment,
+          updatedAt: serverTimestamp()
+        });
+        return;
       }
 
-      const employee = employeeDoc.data() as User;
+      if (leaveData.leaveType === 'wfh') {
+        transaction.update(leaveRef, {
+          status: 'approved',
+          hrComment: comment,
+          updatedAt: serverTimestamp()
+        });
+        return;
+      }
+
+      if (leaveData.leaveType === 'extra_work') {
+        transaction.update(employeeRef, {
+          compOffBalance: empData.compOffBalance + leaveData.totalDays,
+          updatedAt: serverTimestamp()
+        });
+
+        transaction.update(leaveRef, {
+          status: 'approved',
+          hrComment: comment,
+          updatedAt: serverTimestamp()
+        });
+        return;
+      }
+
+      // Standard deductive leaves
+      let remainingDays = leaveData.totalDays;
+      let hrOverride = false;
+
+      if (overrideCompOff !== undefined || overrideAnnualLeave !== undefined) {
+        hrOverride = true;
+        compOffUsed = overrideCompOff || 0;
+        annualLeaveUsed = overrideAnnualLeave || 0;
+        hrOverrideDetails = `HR Override: Comp Off = ${compOffUsed}, Annual Leave = ${annualLeaveUsed}`;
+      } else {
+        if (['menstrual', 'bereavement'].indexOf(leaveData.leaveType) === -1) {
+          if (leaveData.selectedSources.compOff && empData.compOffBalance > 0) {
+            compOffUsed = Math.min(empData.compOffBalance, remainingDays);
+            remainingDays -= compOffUsed;
+          }
+
+          if (leaveData.selectedSources.annualLeave && remainingDays > 0) {
+            annualLeaveUsed = Math.min(empData.annualLeaveBalance, remainingDays);
+            remainingDays -= annualLeaveUsed;
+          }
+        }
+      }
 
       transaction.update(employeeRef, {
-        compOffBalance: employee.compOffBalance + leaveData.totalDays,
+        compOffBalance: empData.compOffBalance - compOffUsed,
+        annualLeaveBalance: empData.annualLeaveBalance - annualLeaveUsed,
         updatedAt: serverTimestamp()
       });
 
       transaction.update(leaveRef, {
         status: 'approved',
         hrComment: comment,
+        compOffUsed,
+        annualLeaveUsed,
+        hrOverride,
+        hrOverrideDetails,
         updatedAt: serverTimestamp()
       });
+    } else {
+      // Employee doc doesn't exist, we can only update the leave
+      transaction.update(leaveRef, {
+        status: !approved ? 'rejected' : 'approved',
+        hrComment: comment,
+        updatedAt: serverTimestamp()
+      });
+    }
+  });
 
-      // Send Slack DM to the employee
-      const satEmpData = employeeDoc.data() as User;
-      const satTargetIds: string[] = satEmpData.slackMemberId ? [satEmpData.slackMemberId] : [];
+  if (!leaveData) return;
+
+  const targetIds = employeeSlackId ? [employeeSlackId] : [];
+
+  if (targetIds.length > 0) {
+    if (!approved) {
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: 'rejected',
+        hrComment: comment,
+        timestamp: new Date().toISOString(),
+        targetSlackIds: targetIds
+      });
+    } else if (leaveData.leaveType === 'wfh') {
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: 'approved',
+        hrComment: comment,
+        timestamp: new Date().toISOString(),
+        targetSlackIds: targetIds
+      });
+    } else if (leaveData.leaveType === 'extra_work') {
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
@@ -491,80 +532,23 @@ export const hrApproval = async (
         hrComment: comment,
         deductionDetails: `Comp Off Earned: +${leaveData.totalDays} day(s)`,
         timestamp: new Date().toISOString(),
-        targetSlackIds: satTargetIds
+        targetSlackIds: targetIds
       });
-      return;
-    }
-
-    // Get employee data
-    const employeeRef = doc(db, 'users', leaveData.employeeId);
-    const employeeDoc = await transaction.get(employeeRef);
-
-    if (!employeeDoc.exists()) {
-      throw new Error('Employee not found');
-    }
-
-    const employee = employeeDoc.data() as User;
-    let compOffUsed = 0;
-    let annualLeaveUsed = 0;
-    let remainingDays = leaveData.totalDays;
-    let hrOverride = false;
-    let hrOverrideDetails = '';
-
-    // Check if HR is overriding the leave source
-    if (overrideCompOff !== undefined || overrideAnnualLeave !== undefined) {
-      hrOverride = true;
-      compOffUsed = overrideCompOff || 0;
-      annualLeaveUsed = overrideAnnualLeave || 0;
-      hrOverrideDetails = `HR Override: Comp Off = ${compOffUsed}, Annual Leave = ${annualLeaveUsed}`;
     } else {
-      // Standard deduction logic based on employee selection
-      if (['menstrual', 'bereavement'].indexOf(leaveData.leaveType) === -1) {
-        if (leaveData.selectedSources.compOff && employee.compOffBalance > 0) {
-          compOffUsed = Math.min(employee.compOffBalance, remainingDays);
-          remainingDays -= compOffUsed;
-        }
-
-        if (leaveData.selectedSources.annualLeave && remainingDays > 0) {
-          annualLeaveUsed = Math.min(employee.annualLeaveBalance, remainingDays);
-          remainingDays -= annualLeaveUsed;
-        }
-      }
+      await sendSlackNotification({
+        employeeName: leaveData.employeeName,
+        leaveType: leaveData.leaveType,
+        startDate: leaveData.startDate.toISOString().split('T')[0],
+        endDate: leaveData.endDate.toISOString().split('T')[0],
+        totalDays: leaveData.totalDays,
+        status: 'approved',
+        hrComment: comment,
+        deductionDetails: `Comp Off Used: ${compOffUsed}, Annual Leave Used: ${annualLeaveUsed}${hrOverrideDetails ? ' | ' + hrOverrideDetails : ''}`,
+        timestamp: new Date().toISOString(),
+        targetSlackIds: targetIds
+      });
     }
-
-    // Update employee balances
-    transaction.update(employeeRef, {
-      compOffBalance: employee.compOffBalance - compOffUsed,
-      annualLeaveBalance: employee.annualLeaveBalance - annualLeaveUsed,
-      updatedAt: serverTimestamp()
-    });
-
-    // Update leave request
-    transaction.update(leaveRef, {
-      status: 'approved',
-      hrComment: comment,
-      compOffUsed,
-      annualLeaveUsed,
-      hrOverride,
-      hrOverrideDetails,
-      updatedAt: serverTimestamp()
-    });
-
-    // Send Slack DM to the employee
-    const empTargetIds: string[] = employee.slackMemberId ? [employee.slackMemberId] : [];
-    await sendSlackNotification({
-      employeeName: leaveData.employeeName,
-      leaveType: leaveData.leaveType,
-      startDate: leaveData.startDate.toISOString().split('T')[0],
-      endDate: leaveData.endDate.toISOString().split('T')[0],
-      totalDays: leaveData.totalDays,
-      status: 'approved',
-      hrComment: comment,
-      deductionDetails: `Comp Off Used: ${compOffUsed}, Annual Leave Used: ${annualLeaveUsed}${hrOverrideDetails ? ' | ' + hrOverrideDetails : ''}`,
-      timestamp: new Date().toISOString(),
-      targetSlackIds: empTargetIds
-    });
-  });
+  }
 };
 
 // HR cancel leave request
