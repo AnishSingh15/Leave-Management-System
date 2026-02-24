@@ -46,12 +46,15 @@ service cloud.firestore {
         request.resource.data.compOffBalance == 0;
       
       // Users can update their own basic info, but not role or balances
+      // Managers can update compOffBalance for their employees (extra work approval)
       allow update: if isAuthenticated() && (
         (isOwner(userId) && 
           request.resource.data.role == resource.data.role &&
           request.resource.data.annualLeaveBalance == resource.data.annualLeaveBalance &&
           request.resource.data.compOffBalance == resource.data.compOffBalance) ||
-        isManager()
+        (isManager() && 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['compOffBalance', 'updatedAt'])) ||
+        isHRAdmin()
       );
       
       // Only HR Admin can delete users
