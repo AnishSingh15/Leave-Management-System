@@ -724,6 +724,16 @@ const Approvals: React.FC = () => {
                 borderRadius: '8px'
               }}
             />
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <a
+                href={viewImage}
+                download="receipt.png"
+                className="btn btn-primary"
+                style={{ textDecoration: 'none', display: 'inline-block' }}
+              >
+                ⬇ Download Receipt
+              </a>
+            </div>
           </div>
         </div>
       )}

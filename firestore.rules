@@ -83,7 +83,12 @@ service cloud.firestore {
         // Manager approval/rejection
         (resource.data.managerId == request.auth.uid &&
           resource.data.status == 'pending_manager' &&
-          (request.resource.data.status == 'pending_hr' || request.resource.data.status == 'rejected')) ||
+          (
+            request.resource.data.status == 'pending_hr' || 
+            request.resource.data.status == 'rejected' || 
+            (resource.data.leaveType == 'extra_work' && request.resource.data.status == 'approved')
+          )
+        ) ||
         // HR Admin can do anything
         isHRAdmin()
       );

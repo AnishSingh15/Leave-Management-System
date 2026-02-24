@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getEmployeeLeaves } from '../../services/leaveService';
-import { LeaveRequest } from '../../types';
+import { getTodayAttendance, clockIn } from '../../services/attendanceService';
+import { LeaveRequest, AttendanceRecord } from '../../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import LeaveCalendar from '../Calendar/LeaveCalendar';
 import './Dashboard.css';
@@ -11,6 +12,9 @@ const Dashboard: React.FC = () => {
   const [recentLeaves, setRecentLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [menstrualTaken, setMenstrualTaken] = useState(false);
+  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
+  const [clockInLoading, setClockInLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,16 +27,19 @@ const Dashboard: React.FC = () => {
           const today = new Date();
           const start = startOfMonth(today);
           const end = endOfMonth(today);
-          
-          const hasMenstrual = leaves.some(l => 
-            l.leaveType === 'menstrual' && 
+
+          const hasMenstrual = leaves.some(l =>
+            l.leaveType === 'menstrual' &&
             ['approved', 'pending_manager', 'pending_hr'].includes(l.status) &&
             new Date(l.startDate) >= start &&
             new Date(l.startDate) <= end
           );
           setMenstrualTaken(hasMenstrual);
+
+          const attendance = await getTodayAttendance(userData.uid);
+          setTodayAttendance(attendance);
         } catch (error) {
-          console.error('Error fetching leaves:', error);
+          console.error('Error fetching dashboard data:', error);
         } finally {
           setLoading(false);
         }
@@ -77,27 +84,88 @@ const Dashboard: React.FC = () => {
         <p>Manage your leaves and attendance from here</p>
       </div>
 
+      {error && (
+        <div className="error-message" style={{ marginBottom: '1rem', color: '#dc2626', background: '#fee2e2', padding: '10px', borderRadius: '4px' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Clock In Widget */}
+      <div className="card" style={{ marginBottom: '1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+        <div className="card-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
+          <h2>Daily Attendance</h2>
+        </div>
+        <div style={{ padding: '0 1.5rem 1.5rem' }}>
+          {!todayAttendance ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <p style={{ margin: 0, color: '#64748b' }}>You haven't clocked in today.</p>
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  try {
+                    setError(null);
+                    setClockInLoading(true);
+                    if (userData) {
+                      const record = await clockIn(userData);
+                      setTodayAttendance(record);
+                    }
+                  } catch (err: any) {
+                    setError(err.message || 'Failed to clock in');
+                  } finally {
+                    setClockInLoading(false);
+                  }
+                }}
+                disabled={clockInLoading}
+                style={{ padding: '0.5rem 1.5rem', fontWeight: 'bold' }}
+              >
+                {clockInLoading ? 'Clocking In...' : 'Clock In Now'}
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {todayAttendance.status === 'clocked_in' ? (
+                <>
+                  <span className="status-badge approved" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>Clocked In</span>
+                  <p style={{ margin: 0, color: '#334155' }}>
+                    <strong>Time:</strong> {format(new Date(todayAttendance.clockInTime), 'hh:mm a')}
+                  </p>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>(Auto log-out scheduled for 7:00 PM IST)</p>
+                </>
+              ) : (
+                <>
+                  <span className="status-badge warning" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>Auto Logged Out</span>
+                  <p style={{ margin: 0, color: '#334155' }}>
+                    <strong>Clocked out at:</strong> 07:00 PM
+                  </p>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>(Clock-in time was {format(new Date(todayAttendance.clockInTime), 'hh:mm a')})</p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="stats-grid">
         <div className="stat-card primary">
           <div className="stat-value">{userData?.annualLeaveBalance || 0}</div>
           <div className="stat-label">Annual Leave Balance (of 20)</div>
         </div>
-        
+
         <div className="stat-card success">
           <div className="stat-value">{userData?.compOffBalance || 0}</div>
           <div className="stat-label">Comp Off Balance</div>
         </div>
-        
+
         <div className="stat-card warning">
           <div className="stat-value">{pendingCount}</div>
           <div className="stat-label">Pending Requests</div>
         </div>
-        
+
         <div className="stat-card info">
           <div className="stat-value">{approvedCount}</div>
           <div className="stat-label">Approved This Year</div>
         </div>
-        
+
         <div className="stat-card" style={{ background: '#fdf4ff', borderLeft: '4px solid #d946ef' }}>
           <div className="stat-value" style={{ color: '#d946ef' }}>
             {menstrualTaken ? 'Taken' : 'Available'}
@@ -110,7 +178,7 @@ const Dashboard: React.FC = () => {
         <div className="card-header">
           <h2>Recent Leave Requests</h2>
         </div>
-        
+
         {loading ? (
           <div className="loading">Loading...</div>
         ) : recentLeaves.length === 0 ? (
@@ -168,10 +236,10 @@ const Dashboard: React.FC = () => {
             <li>Comp Off will be deducted first if selected</li>
             <li>Annual Leave will be deducted for remaining days</li>
             <li>Work From Home (WFH) does not affect leave balance</li>
-        
+
           </ul>
         </div>
-        
+
         <div className="card">
           <h3>Need Help?</h3>
           <p>Contact HR for any leave-related queries or balance adjustments.</p>
