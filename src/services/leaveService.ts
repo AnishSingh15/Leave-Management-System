@@ -245,47 +245,94 @@ export const managerDecision = async (
   comment: string,
   managerName: string
 ): Promise<void> => {
-  const leaveRef = doc(db, 'leaves', leaveId);
-  const leaveDoc = await getDoc(leaveRef);
+  let leaveData = null as LeaveRequest | null;
+  let employeeId = '';
 
-  if (!leaveDoc.exists()) {
-    throw new Error('Leave request not found');
-  }
+  await runTransaction(db, async (transaction) => {
+    const leaveRef = doc(db, 'leaves', leaveId);
+    const leaveDoc = await transaction.get(leaveRef);
 
-  const leaveData = convertLeaveDoc(leaveDoc);
-  const newStatus: LeaveStatus = approved ? 'pending_hr' : 'rejected';
+    if (!leaveDoc.exists()) {
+      throw new Error('Leave request not found');
+    }
 
-  await updateDoc(leaveRef, {
-    status: newStatus,
-    managerComment: comment,
-    updatedAt: serverTimestamp()
+    leaveData = convertLeaveDoc(leaveDoc);
+    employeeId = leaveData.employeeId;
+
+    // Reject Flow
+    if (!approved) {
+      transaction.update(leaveRef, {
+        status: 'rejected',
+        managerComment: comment,
+        updatedAt: serverTimestamp()
+      });
+      return;
+    }
+
+    // Approve Flow - Extra Work / Saturday Work
+    if (leaveData.leaveType === 'extra_work') {
+      const employeeRef = doc(db, 'users', employeeId);
+      const employeeDoc = await transaction.get(employeeRef);
+
+      if (!employeeDoc.exists()) {
+        throw new Error('Employee not found');
+      }
+
+      const employee = employeeDoc.data() as User;
+
+      transaction.update(employeeRef, {
+        compOffBalance: employee.compOffBalance + leaveData.totalDays,
+        updatedAt: serverTimestamp()
+      });
+
+      transaction.update(leaveRef, {
+        status: 'approved',
+        managerComment: comment,
+        updatedAt: serverTimestamp()
+      });
+      return;
+    }
+
+    // Approve Flow - Normal Leaves
+    transaction.update(leaveRef, {
+      status: 'pending_hr',
+      managerComment: comment,
+      updatedAt: serverTimestamp()
+    });
   });
 
-  // Send Slack DMs
-  const empRef = doc(db, 'users', leaveData.employeeId);
+  if (!leaveData) return;
+
+  // Send Slack DMs after transaction succeeds
+  const newStatus: LeaveStatus = approved
+    ? (leaveData.leaveType === 'extra_work' ? 'approved' : 'pending_hr')
+    : 'rejected';
+
+  const empRef = doc(db, 'users', employeeId);
   const empSnap = await getDoc(empRef);
   const empSlackId = empSnap.exists() ? empSnap.data().slackMemberId : null;
 
   if (approved) {
-    // 1. DM HR admins with link to approve
-    const hrSlackIds = await getHRSlackIds();
-    await sendSlackNotification({
-      employeeName: leaveData.employeeName,
-      leaveType: leaveData.leaveType,
-      startDate: leaveData.startDate.toISOString().split('T')[0],
-      endDate: leaveData.endDate.toISOString().split('T')[0],
-      totalDays: leaveData.totalDays,
-      status: newStatus,
-      managerName,
-      managerComment: comment,
-      timestamp: new Date().toISOString(),
-      targetSlackIds: hrSlackIds,
-      leaveId,
-      approvalType: 'hr'
-    });
-
-    // 2. Also DM the employee that their request was approved by manager & is now pending HR
-    if (empSlackId) {
+    if (leaveData.leaveType === 'extra_work') {
+      // Extra work is fully approved, just DM the employee
+      if (empSlackId) {
+        await sendSlackNotification({
+          employeeName: leaveData.employeeName,
+          leaveType: leaveData.leaveType,
+          startDate: leaveData.startDate.toISOString().split('T')[0],
+          endDate: leaveData.endDate.toISOString().split('T')[0],
+          totalDays: leaveData.totalDays,
+          status: newStatus,
+          managerName,
+          managerComment: comment,
+          deductionDetails: `Comp Off Earned: +${leaveData.totalDays} day(s)`,
+          timestamp: new Date().toISOString(),
+          targetSlackIds: [empSlackId]
+        });
+      }
+    } else {
+      // Normal leave -> DM HR admins with link to approve
+      const hrSlackIds = await getHRSlackIds();
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
@@ -296,8 +343,26 @@ export const managerDecision = async (
         managerName,
         managerComment: comment,
         timestamp: new Date().toISOString(),
-        targetSlackIds: [empSlackId]
+        targetSlackIds: hrSlackIds,
+        leaveId,
+        approvalType: 'hr'
       });
+
+      // Also DM the employee that their request was approved by manager & is now pending HR
+      if (empSlackId) {
+        await sendSlackNotification({
+          employeeName: leaveData.employeeName,
+          leaveType: leaveData.leaveType,
+          startDate: leaveData.startDate.toISOString().split('T')[0],
+          endDate: leaveData.endDate.toISOString().split('T')[0],
+          totalDays: leaveData.totalDays,
+          status: newStatus,
+          managerName,
+          managerComment: comment,
+          timestamp: new Date().toISOString(),
+          targetSlackIds: [empSlackId]
+        });
+      }
     }
   } else {
     // Rejected → DM the employee

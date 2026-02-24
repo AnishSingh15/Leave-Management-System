@@ -63,14 +63,32 @@ const Approvals: React.FC = () => {
       let hReimbs: ReimbursementRequest[];
 
       if (isHRAdmin) {
-        [leaves, missed, reimbs, hLeaves, hMissed, hReimbs] = await Promise.all([
+        // Fetch both HR queues and Manager queues for HR admins
+        const [
+          hrLeaves, hrMissed, hrReimbs,
+          mgrLeaves, mgrMissed, mgrReimbs,
+          fetchedHLeaves, fetchedHMissed, fetchedHReimbs
+        ] = await Promise.all([
           getHRPendingLeaves(),
           getAllPendingMissedClockIns(),
           getAllPendingReimbursements(),
+          getManagerPendingLeaves(userData.uid),
+          getPendingMissedClockIns(userData.uid),
+          getPendingReimbursements(userData.uid),
           getHRLeaveHistory(),
           getHRMissedClockInHistory(),
           getHRReimbursementHistory(),
         ]);
+
+        // Merge and deduplicate just in case
+        leaves = [...hrLeaves, ...mgrLeaves.filter(m => !hrLeaves.find(h => h.id === m.id))];
+        missed = [...hrMissed, ...mgrMissed.filter(m => !hrMissed.find(h => h.id === m.id))];
+        reimbs = [...hrReimbs, ...mgrReimbs.filter(m => !hrReimbs.find(h => h.id === m.id))];
+
+        hLeaves = fetchedHLeaves;
+        hMissed = fetchedHMissed;
+        hReimbs = fetchedHReimbs;
+
       } else {
         [leaves, missed, reimbs, hLeaves, hMissed, hReimbs] = await Promise.all([
           getManagerPendingLeaves(userData.uid),
