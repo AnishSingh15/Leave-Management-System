@@ -53,7 +53,7 @@ service cloud.firestore {
           request.resource.data.annualLeaveBalance == resource.data.annualLeaveBalance &&
           request.resource.data.compOffBalance == resource.data.compOffBalance) ||
         (isManager() && 
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['compOffBalance', 'updatedAt'])) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['compOffBalance', 'updatedAt', 'slackId', 'notificationsEnabled'])) ||
         isHRAdmin()
       );
       
