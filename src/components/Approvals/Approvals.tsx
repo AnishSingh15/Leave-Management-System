@@ -259,6 +259,15 @@ const Approvals: React.FC = () => {
                   <span className="leave-type-badge">
                     {formatLeaveType(leave.leaveType)}
                   </span>
+                  {isHRAdmin && leave.status === 'pending_hr' && (
+                    <span
+                      className="leave-type-badge"
+                      style={{ background: '#10b981', marginLeft: '8px' }}
+                      title={`Approved by ${leave.managerName}`}
+                    >
+                      ✓ Manager Approved
+                    </span>
+                  )}
                 </div>
 
                 <div className="approval-body">
@@ -425,6 +434,15 @@ const Approvals: React.FC = () => {
                   <span className="leave-type-badge" style={{ background: '#059669' }}>
                     ₹{req.totalAmount.toFixed(2)}
                   </span>
+                  {isHRAdmin && req.status === 'pending_hr' && (
+                    <span
+                      className="leave-type-badge"
+                      style={{ background: '#10b981', marginLeft: '8px' }}
+                      title={`Approved by ${req.managerName}`}
+                    >
+                      ✓ Manager Approved
+                    </span>
+                  )}
                 </div>
 
                 <div className="approval-body">
