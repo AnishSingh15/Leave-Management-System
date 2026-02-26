@@ -607,10 +607,55 @@ const Approvals: React.FC = () => {
                       </span>
                     </div>
                     <div className="approval-body">
-                      <div className="approval-detail">
-                        <span className="label">Amount</span>
+                      <div className="approval-detail" style={{ width: '100%', marginBottom: '12px' }}>
+                        <span className="label">Total Amount</span>
                         <span className="value">₹{req.totalAmount.toFixed(2)}</span>
                       </div>
+
+                      {req.items?.map((item, idx) => (
+                        <div key={idx} className="approval-row" style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '8px', marginBottom: '8px', width: '100%' }}>
+                          <div className="approval-detail">
+                            <span className="label">Item {idx + 1}</span>
+                            <span className="value">{item.name}</span>
+                          </div>
+                          <div className="approval-detail">
+                            <span className="label">Amount</span>
+                            <span className="value">₹{item.amount.toFixed(2)}</span>
+                          </div>
+                          <div className="approval-detail">
+                            <span className="label">Bills</span>
+                            <span className="value" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                              {item.billUrls?.map((url, bIdx) => (
+                                <button
+                                  key={bIdx}
+                                  type="button"
+                                  onClick={() => setViewImage(url)}
+                                  title="Click to view full size"
+                                  style={{
+                                    background: 'none',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '4px',
+                                    padding: 0,
+                                    cursor: 'pointer',
+                                    overflow: 'hidden'
+                                  }}
+                                >
+                                  <img
+                                    src={url}
+                                    alt={`Bill ${bIdx + 1}`}
+                                    style={{
+                                      width: '40px',
+                                      height: '40px',
+                                      objectFit: 'cover',
+                                      display: 'block'
+                                    }}
+                                  />
+                                </button>
+                              ))}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     <div className="approval-footer">
                       <span>Updated: {format(new Date(req.updatedAt || req.createdAt), 'MMM dd, yyyy')}</span>
