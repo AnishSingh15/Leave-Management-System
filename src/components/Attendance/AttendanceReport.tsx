@@ -99,8 +99,6 @@ const AttendanceReport: React.FC = () => {
                                     <thead>
                                         <tr>
                                             <th>Employee</th>
-                                            <th>Clock In Time</th>
-                                            <th>Clock Out Time</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -111,12 +109,8 @@ const AttendanceReport: React.FC = () => {
                                                     <strong>{record.employeeName}</strong>
                                                     {record.isMissedClockIn && <span className="missed-tag">Missed</span>}
                                                 </td>
-                                                <td>{format(new Date(record.clockInTime), 'hh:mm a')}</td>
-                                                <td>{format(new Date(record.clockOutTime), 'hh:mm a')}</td>
                                                 <td>
-                                                    <span className={`status-badge ${record.status === 'auto_logged_out' ? 'approved' : 'pending_hr'}`}>
-                                                        {record.status === 'auto_logged_out' ? 'Logged Out' : 'Working'}
-                                                    </span>
+                                                    <span className="status-badge approved">Present</span>
                                                 </td>
                                             </tr>
                                         ))}
