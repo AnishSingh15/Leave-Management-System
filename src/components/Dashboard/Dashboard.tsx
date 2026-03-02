@@ -123,23 +123,7 @@ const Dashboard: React.FC = () => {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              {todayAttendance.status === 'clocked_in' ? (
-                <>
-                  <span className="status-badge approved" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>Clocked In</span>
-                  <p style={{ margin: 0, color: '#334155' }}>
-                    <strong>Time:</strong> {format(new Date(todayAttendance.clockInTime), 'hh:mm a')}
-                  </p>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>(Auto log-out scheduled for 7:00 PM IST)</p>
-                </>
-              ) : (
-                <>
-                  <span className="status-badge warning" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>Auto Logged Out</span>
-                  <p style={{ margin: 0, color: '#334155' }}>
-                    <strong>Clocked out at:</strong> 07:00 PM
-                  </p>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>(Clock-in time was {format(new Date(todayAttendance.clockInTime), 'hh:mm a')})</p>
-                </>
-              )}
+              <span className="status-badge approved" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>Present</span>
             </div>
           )}
         </div>
