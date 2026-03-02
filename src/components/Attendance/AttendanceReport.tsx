@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { getAttendanceByDate } from '../../services/attendanceService';
 import { getAllUsers } from '../../services/userService';
 import { AttendanceRecord, User } from '../../types';
-import { format } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
+import * as XLSX from 'xlsx';
 import './AttendanceReport.css';
 
 const AttendanceReport: React.FC = () => {
@@ -10,6 +11,10 @@ const AttendanceReport: React.FC = () => {
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [downloadFromDate, setDownloadFromDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [downloadToDate, setDownloadToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [downloadFormat, setDownloadFormat] = useState<'xlsx' | 'csv'>('xlsx');
+    const [downloading, setDownloading] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -42,6 +47,61 @@ const AttendanceReport: React.FC = () => {
         : [];
     const presentCount = records.length;
     const absentCount = absentUsers.length;
+
+    const handleDownload = async () => {
+        setDownloading(true);
+        try {
+            const from = parseISO(downloadFromDate);
+            const to = parseISO(downloadToDate);
+            if (from > to) {
+                alert('"From" date must be before or equal to "To" date.');
+                setDownloading(false);
+                return;
+            }
+
+            // Fetch users once
+            const usersData = await getAllUsers();
+            const activeUsers = usersData.filter(u => u.isActive);
+
+            // Build rows for each date
+            const rows: { Date: string; Employee: string; Email: string; Status: string }[] = [];
+            let current = from;
+            while (current <= to) {
+                const currentDate = current;
+                const dateStr = format(currentDate, 'yyyy-MM-dd');
+                const dayRecords = await getAttendanceByDate(dateStr);
+                const presentIds = new Set(dayRecords.map(r => r.employeeId));
+
+                activeUsers.forEach(user => {
+                    rows.push({
+                        Date: format(currentDate, 'dd-MM-yyyy'),
+                        Employee: user.name,
+                        Email: user.email,
+                        Status: presentIds.has(user.uid) ? 'Present' : 'Absent',
+                    });
+                });
+
+                current = addDays(current, 1);
+            }
+
+            // Create workbook
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+
+            const filename = `attendance_${downloadFromDate}_to_${downloadToDate}.${downloadFormat}`;
+            if (downloadFormat === 'csv') {
+                XLSX.writeFile(wb, filename, { bookType: 'csv' });
+            } else {
+                XLSX.writeFile(wb, filename, { bookType: 'xlsx' });
+            }
+        } catch (err) {
+            console.error('Download error:', err);
+            alert('Failed to generate report. Please try again.');
+        } finally {
+            setDownloading(false);
+        }
+    };
 
     return (
         <div className="attendance-report">
@@ -77,6 +137,49 @@ const AttendanceReport: React.FC = () => {
                         <div className="report-stat-label">Total</div>
                     </div>
                 </div>
+            </div>
+
+            {/* Download Section */}
+            <div className="report-download" style={{ marginTop: '1.5rem', padding: '1rem', background: '#f1f5f9', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>From</label>
+                    <input
+                        type="date"
+                        value={downloadFromDate}
+                        onChange={(e) => setDownloadFromDate(e.target.value)}
+                        max={format(new Date(), 'yyyy-MM-dd')}
+                        style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>To</label>
+                    <input
+                        type="date"
+                        value={downloadToDate}
+                        onChange={(e) => setDownloadToDate(e.target.value)}
+                        max={format(new Date(), 'yyyy-MM-dd')}
+                        style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Format</label>
+                    <select
+                        value={downloadFormat}
+                        onChange={(e) => setDownloadFormat(e.target.value as 'xlsx' | 'csv')}
+                        style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    >
+                        <option value="xlsx">Excel (.xlsx)</option>
+                        <option value="csv">CSV (.csv)</option>
+                    </select>
+                </div>
+                <button
+                    className="btn btn-primary"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    style={{ padding: '0.5rem 1.5rem', fontWeight: 'bold' }}
+                >
+                    {downloading ? 'Generating...' : '⬇ Download Report'}
+                </button>
             </div>
 
             {loading ? (

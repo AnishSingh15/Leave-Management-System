@@ -10,7 +10,7 @@ import './LeaveForm.css';
 const LeaveForm: React.FC = () => {
   const { userData } = useAuth();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState<LeaveFormData>({
     leaveType: 'casual',
     startDate: '',
@@ -21,7 +21,7 @@ const LeaveForm: React.FC = () => {
     useCompOff: false,
     useAnnualLeave: true
   });
-  
+
   const [managers, setManagers] = useState<User[]>([]);
   const [totalDays, setTotalDays] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -75,7 +75,7 @@ const LeaveForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
@@ -150,7 +150,7 @@ const LeaveForm: React.FC = () => {
 
       await submitLeaveRequest(formData, userData, manager);
       setSuccess('Leave request submitted successfully!');
-      
+
       setTimeout(() => {
         navigate('/my-leaves');
       }, 2000);
@@ -226,9 +226,6 @@ const LeaveForm: React.FC = () => {
                 required
               >
                 <option value="casual">Casual Leave</option>
-                <option value="paid">Paid Leave</option>
-                <option value="sick">Sick Leave</option>
-                <option value="comp_off">Comp Off Usage</option>
                 <option value="wfh">Work From Home</option>
                 <option value="extra_work">Extra Day Work — Weekend / Holiday (Earn Comp Off)</option>
                 <option value="menstrual">Menstrual Leave (Monthly 1 day)</option>
