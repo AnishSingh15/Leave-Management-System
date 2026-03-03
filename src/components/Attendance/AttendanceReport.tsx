@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAttendanceByDate } from '../../services/attendanceService';
+import { getAllLeaves } from '../../services/leaveService';
 import { getAllUsers } from '../../services/userService';
 import { AttendanceRecord, User } from '../../types';
 import { format, addDays, parseISO } from 'date-fns';
@@ -59,42 +60,79 @@ const AttendanceReport: React.FC = () => {
                 return;
             }
 
-            // Fetch users once
+            // Fetch users and leaves
             const usersData = await getAllUsers();
-            const activeUsers = usersData.filter(u => u.isActive);
+            const activeUsers = usersData.filter(u => u.isActive).sort((a, b) => a.name.localeCompare(b.name));
+            const allLeaves = await getAllLeaves();
 
-            // Build rows for each date
-            const rows: { Date: string; Employee: string; Email: string; Status: string }[] = [];
-            let current = from;
-            while (current <= to) {
-                const currentDate = current;
-                const dateStr = format(currentDate, 'yyyy-MM-dd');
-                const dayRecords = await getAttendanceByDate(dateStr);
-                const presentIds = new Set(dayRecords.map(r => r.employeeId));
-
-                activeUsers.forEach(user => {
-                    rows.push({
-                        Date: format(currentDate, 'dd-MM-yyyy'),
-                        Employee: user.name,
-                        Email: user.email,
-                        Status: presentIds.has(user.uid) ? 'Present' : 'Absent',
-                    });
-                });
-
-                current = addDays(current, 1);
+            // Build list of dates
+            const dateList: Date[] = [];
+            let d = from;
+            while (d <= to) {
+                dateList.push(d);
+                d = addDays(d, 1);
             }
 
+            // Fetch attendance for each date
+            const attendanceByDate: Map<string, Set<string>> = new Map();
+            for (const date of dateList) {
+                const dateStr = format(date, 'yyyy-MM-dd');
+                const dayRecords = await getAttendanceByDate(dateStr);
+                attendanceByDate.set(dateStr, new Set(dayRecords.map(r => r.employeeId)));
+            }
+
+            // Build a lookup: employeeId -> date -> leaveType (for approved leaves)
+            const leaveMap = new Map<string, Map<string, string>>();
+            const leaveTypes: Record<string, string> = {
+                casual: 'Casual Leave', wfh: 'WFH', extra_work: 'Extra Work',
+                menstrual: 'Menstrual Leave', bereavement: 'Bereavement Leave', paid: 'Paid Leave', sick: 'Sick Leave', comp_off: 'Comp Off'
+            };
+            allLeaves.filter(l => l.status === 'approved').forEach(leave => {
+                if (!leaveMap.has(leave.employeeId)) {
+                    leaveMap.set(leave.employeeId, new Map());
+                }
+                const empMap = leaveMap.get(leave.employeeId)!;
+                // Mark each date in the leave range
+                let ld = new Date(leave.startDate);
+                const le = new Date(leave.endDate);
+                while (ld <= le) {
+                    empMap.set(format(ld, 'yyyy-MM-dd'), leaveTypes[leave.leaveType] || leave.leaveType);
+                    ld = addDays(ld, 1);
+                }
+            });
+
+            // Build header row: Employee | Email | date1 | date2 | ...
+            const headers = ['Employee', 'Email', ...dateList.map(dt => format(dt, 'dd-MMM'))];
+
+            // Build data rows: one row per employee
+            const dataRows: string[][] = [];
+            activeUsers.forEach(user => {
+                const row: string[] = [user.name, user.email];
+                dateList.forEach(dt => {
+                    const dateStr = format(dt, 'yyyy-MM-dd');
+                    const presentSet = attendanceByDate.get(dateStr);
+                    const isPresent = presentSet?.has(user.uid);
+                    const leaveType = leaveMap.get(user.uid)?.get(dateStr);
+
+                    if (isPresent) {
+                        row.push('Present');
+                    } else if (leaveType) {
+                        row.push(leaveType);
+                    } else {
+                        row.push('Absent');
+                    }
+                });
+                dataRows.push(row);
+            });
+
             // Create workbook
-            const ws = XLSX.utils.json_to_sheet(rows);
+            const sheetData = [headers, ...dataRows];
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
 
             const filename = `attendance_${downloadFromDate}_to_${downloadToDate}.${downloadFormat}`;
-            if (downloadFormat === 'csv') {
-                XLSX.writeFile(wb, filename, { bookType: 'csv' });
-            } else {
-                XLSX.writeFile(wb, filename, { bookType: 'xlsx' });
-            }
+            XLSX.writeFile(wb, filename, { bookType: downloadFormat });
         } catch (err) {
             console.error('Download error:', err);
             alert('Failed to generate report. Please try again.');
