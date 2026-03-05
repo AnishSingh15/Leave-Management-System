@@ -165,8 +165,9 @@ const LeaveForm: React.FC = () => {
   const isExtraWork = formData.leaveType === 'extra_work';
   const isMenstrual = formData.leaveType === 'menstrual';
   const isBereavement = formData.leaveType === 'bereavement';
+  const isSickLeave = formData.leaveType === 'sick';
   const noDeduction = isWFH || isExtraWork || isMenstrual || isBereavement;
-  const compOffDisabled = !userData?.compOffBalance || userData.compOffBalance <= 0;
+  const compOffDisabled = isSickLeave || !userData?.compOffBalance || userData.compOffBalance <= 0;
   const annualLeaveDisabled = !userData?.annualLeaveBalance || userData.annualLeaveBalance <= 0;
 
   const getPageTitle = () => {
@@ -226,6 +227,7 @@ const LeaveForm: React.FC = () => {
                 required
               >
                 <option value="casual">Casual Leave</option>
+                <option value="sick">Sick Leave</option>
                 <option value="wfh">Work From Home</option>
                 <option value="extra_work">Extra Day Work — Weekend / Holiday (Earn Comp Off)</option>
                 <option value="menstrual">Menstrual Leave (Monthly 1 day)</option>
@@ -286,22 +288,9 @@ const LeaveForm: React.FC = () => {
             <div className="form-group">
               <label>Total Days</label>
               <div className="total-days-display">
-                {isMenstrual ? '1 day' : `${totalDays} ${totalDays === 1 ? 'day' : 'days'}${formData.isHalfDay ? ' (Half Day)' : ''}`}
+                {isMenstrual ? '1 day' : `${totalDays} ${totalDays === 1 ? 'day' : 'days'}`}
               </div>
             </div>
-
-            {!isMenstrual && (
-              <div className="form-group checkbox-inline">
-                <input
-                  type="checkbox"
-                  id="isHalfDay"
-                  name="isHalfDay"
-                  checked={formData.isHalfDay}
-                  onChange={handleChange}
-                />
-                <label htmlFor="isHalfDay">Half Day</label>
-              </div>
-            )}
           </div>
 
           {!noDeduction && (
