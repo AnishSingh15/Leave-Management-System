@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { getAttendanceByDate } from '../../services/attendanceService';
 import { getAllLeaves } from '../../services/leaveService';
 import { getAllUsers } from '../../services/userService';
+import { NATIONAL_HOLIDAYS } from '../Calendar/LeaveCalendar';
 import { AttendanceRecord, User } from '../../types';
-import { format, addDays, parseISO } from 'date-fns';
+import { format, addDays, parseISO, isWeekend } from 'date-fns';
 import * as XLSX from 'xlsx';
 import './AttendanceReport.css';
 
@@ -48,6 +49,12 @@ const AttendanceReport: React.FC = () => {
         : [];
     const presentCount = records.length;
     const absentCount = absentUsers.length;
+
+    // Check if the selected date is a holiday or weekend
+    const holidayName = NATIONAL_HOLIDAYS.find(h => h.date === selectedDate)?.name;
+    const isSelectedDateWeekend = isWeekend(new Date(selectedDate + 'T00:00:00'));
+    const isNonWorkingDay = !!holidayName || isSelectedDateWeekend;
+    const nonWorkingLabel = holidayName ? `Holiday — ${holidayName}` : 'Weekend';
 
     const handleDownload = async () => {
         setDownloading(true);
@@ -101,6 +108,9 @@ const AttendanceReport: React.FC = () => {
                 }
             });
 
+            // Build a set of holiday dates for quick lookup
+            const holidaySet = new Set(NATIONAL_HOLIDAYS.map(h => h.date));
+
             // Build header row: Employee | Email | date1 | date2 | ...
             const headers = ['Employee', 'Email', ...dateList.map(dt => format(dt, 'dd-MMM'))];
 
@@ -118,6 +128,10 @@ const AttendanceReport: React.FC = () => {
                         row.push('Present');
                     } else if (leaveType) {
                         row.push(leaveType);
+                    } else if (holidaySet.has(dateStr)) {
+                        row.push('Holiday');
+                    } else if (isWeekend(dt)) {
+                        row.push('Weekend');
                     } else {
                         row.push('Absent');
                     }
@@ -261,12 +275,17 @@ const AttendanceReport: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Absent Employees */}
+                    {/* Absent / Holiday / Weekend Employees */}
                     <div className="card report-section absent-section">
                         <div className="card-header">
-                            <h2>❌ Absent ({absentCount})</h2>
+                            <h2>{isNonWorkingDay ? `🏖️ ${nonWorkingLabel}` : `❌ Absent (${absentCount})`}</h2>
                         </div>
-                        {!isPastDate ? (
+                        {isNonWorkingDay ? (
+                            <div className="empty-state">
+                                <h3>{nonWorkingLabel}</h3>
+                                <p>This is a non-working day. No attendance is expected.</p>
+                            </div>
+                        ) : !isPastDate ? (
                             <div className="empty-state">
                                 <h3>Today / Future date</h3>
                                 <p>Absent list is only available for past dates after office hours</p>
