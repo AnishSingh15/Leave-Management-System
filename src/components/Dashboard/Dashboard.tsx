@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getEmployeeLeaves } from '../../services/leaveService';
-import { getTodayAttendance, clockIn } from '../../services/attendanceService';
-import { LeaveRequest, AttendanceRecord } from '../../types';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { getTodayAttendance, clockIn, submitMissedClockIn, getEmployeeMissedClockIns } from '../../services/attendanceService';
+import { getManagers } from '../../services/userService';
+import { LeaveRequest, AttendanceRecord, MissedClockInRequest, User } from '../../types';
+import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import LeaveCalendar from '../Calendar/LeaveCalendar';
 import './Dashboard.css';
 
@@ -15,6 +16,15 @@ const Dashboard: React.FC = () => {
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
   const [clockInLoading, setClockInLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Missed clock-in state
+  const [missedDate, setMissedDate] = useState('');
+  const [missedManagerId, setMissedManagerId] = useState('');
+  const [managers, setManagers] = useState<User[]>([]);
+  const [missedRequests, setMissedRequests] = useState<MissedClockInRequest[]>([]);
+  const [missedLoading, setMissedLoading] = useState(false);
+  const [missedError, setMissedError] = useState('');
+  const [missedSuccess, setMissedSuccess] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,6 +48,12 @@ const Dashboard: React.FC = () => {
 
           const attendance = await getTodayAttendance(userData.uid);
           setTodayAttendance(attendance);
+
+          // Fetch managers and missed requests
+          const mgrs = await getManagers();
+          setManagers(mgrs.filter(m => m.uid !== userData.uid));
+          const missed = await getEmployeeMissedClockIns(userData.uid);
+          setMissedRequests(missed);
         } catch (error) {
           console.error('Error fetching dashboard data:', error);
         } finally {
@@ -76,6 +92,34 @@ const Dashboard: React.FC = () => {
   ).length;
 
   const approvedCount = recentLeaves.filter(l => l.status === 'approved').length;
+
+  const handleMissedSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMissedError('');
+    setMissedSuccess('');
+    if (!missedDate || !missedManagerId) {
+      setMissedError('Please select both a date and a manager.');
+      return;
+    }
+    const selectedManager = managers.find(m => m.uid === missedManagerId);
+    if (!selectedManager || !userData) return;
+
+    setMissedLoading(true);
+    try {
+      await submitMissedClockIn(userData, missedDate, missedManagerId, selectedManager.name);
+      setMissedSuccess('Request submitted! Waiting for manager approval.');
+      setMissedDate('');
+      setMissedManagerId('');
+      const missed = await getEmployeeMissedClockIns(userData.uid);
+      setMissedRequests(missed);
+    } catch (err: any) {
+      setMissedError(err.message || 'Failed to submit request');
+    } finally {
+      setMissedLoading(false);
+    }
+  };
+
+  const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
   return (
     <div className="dashboard">
@@ -124,6 +168,83 @@ const Dashboard: React.FC = () => {
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <span className="status-badge approved" style={{ fontSize: '0.9rem', padding: '0.4rem 0.8rem' }}>Present</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Missed Clock-In Request */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <div className="card-header">
+          <h2>Missed Attendance Request</h2>
+        </div>
+        <div style={{ padding: '0 1.5rem 1.5rem' }}>
+          <p style={{ color: '#64748b', margin: '0 0 1rem' }}>Forgot to clock in on a past date? Submit a request for manager approval.</p>
+          {missedError && <div style={{ color: '#dc2626', background: '#fee2e2', padding: '8px 12px', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>{missedError}</div>}
+          {missedSuccess && <div style={{ color: '#166534', background: '#dcfce7', padding: '8px 12px', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>{missedSuccess}</div>}
+          <form onSubmit={handleMissedSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 180px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Date *</label>
+              <input
+                type="date"
+                value={missedDate}
+                onChange={(e) => setMissedDate(e.target.value)}
+                max={yesterday}
+                required
+                style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 220px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Approving Manager *</label>
+              <select
+                value={missedManagerId}
+                onChange={(e) => setMissedManagerId(e.target.value)}
+                required
+                style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              >
+                <option value="">Select Manager</option>
+                {managers.map(m => (
+                  <option key={m.uid} value={m.uid}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={missedLoading}
+              style={{ padding: '0.5rem 1.5rem', fontWeight: 'bold' }}
+            >
+              {missedLoading ? 'Submitting...' : 'Submit Request'}
+            </button>
+          </form>
+
+          {missedRequests.length > 0 && (
+            <div style={{ marginTop: '1.25rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem', color: '#334155' }}>Your Requests</h4>
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Manager</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {missedRequests.slice(0, 5).map((req) => (
+                      <tr key={req.id}>
+                        <td>{format(new Date(req.date + 'T00:00:00'), 'dd MMM yyyy')}</td>
+                        <td>{req.managerName}</td>
+                        <td>
+                          <span className={`status-badge ${req.status === 'approved' ? 'approved' : req.status === 'rejected' ? 'rejected' : 'pending_manager'}`}>
+                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

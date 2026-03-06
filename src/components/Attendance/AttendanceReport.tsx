@@ -262,7 +262,6 @@ const AttendanceReport: React.FC = () => {
                                             <tr key={record.id}>
                                                 <td>
                                                     <strong>{record.employeeName}</strong>
-                                                    {record.isMissedClockIn && <span className="missed-tag">Missed</span>}
                                                 </td>
                                                 <td>
                                                     <span className="status-badge approved">Present</span>
