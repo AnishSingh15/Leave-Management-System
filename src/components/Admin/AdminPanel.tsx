@@ -29,6 +29,11 @@ const AdminPanel: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [viewImage, setViewImage] = useState<string | null>(null);
 
+  // Holiday reminder test state
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [reminderResult, setReminderResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [cronSecret, setCronSecret] = useState('');
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -226,12 +231,100 @@ const AdminPanel: React.FC = () => {
     return types[type] || type.replace(/_/g, ' ').toUpperCase();
   };
 
+  const handleSendHolidayReminder = async (forceAll: boolean) => {
+    if (!cronSecret.trim()) {
+      setReminderResult({ ok: false, message: 'Please enter the CRON_SECRET from your Vercel environment variables.' });
+      return;
+    }
+    setReminderLoading(true);
+    setReminderResult(null);
+    try {
+      const body: Record<string, unknown> = { force: true };
+      if (!forceAll && userData?.email) body.testEmail = userData.email;
+      const res = await fetch('/api/holiday-reminder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cronSecret}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setReminderResult({
+          ok: true,
+          message: forceAll
+            ? `✅ Sent to ${data.sent} employee(s): ${data.sentTo?.join(', ') || ''}`
+            : `✅ Test email sent to ${userData?.email}!`,
+        });
+      } else {
+        setReminderResult({ ok: false, message: data.error || data.message || 'Unknown error' });
+      }
+    } catch (err: any) {
+      setReminderResult({ ok: false, message: err.message || 'Network error' });
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
   return (
     <div className="admin-panel">
       <div className="page-header">
         <h1>Admin Panel</h1>
         <p>Manage users, leaves, and system settings</p>
       </div>
+
+      {/* Holiday Reminder Section */}
+      {userData?.role === 'master_admin' && (
+        <div className="card" style={{ marginBottom: '1.5rem', background: '#fffbeb', border: '1px solid #fde68a' }}>
+          <div className="card-header" style={{ borderBottom: '1px solid #fde68a' }}>
+            <h2 style={{ color: '#92400e' }}>🎉 Holiday Reminder Emails</h2>
+          </div>
+          <div style={{ padding: '1.25rem 1.5rem' }}>
+            <p style={{ margin: '0 0 1rem', color: '#78350f', fontSize: '0.92rem' }}>
+              Sends a "Holiday Tomorrow" email to all active employees who have an <strong>Employee ID</strong> set.
+              The cron runs automatically every day at <strong>10:00 AM IST</strong>. Use the buttons below to trigger manually.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 260px' }}>
+                <label style={{ fontSize: '0.83rem', fontWeight: 600, color: '#78350f' }}>CRON_SECRET (from Vercel env vars) *</label>
+                <input
+                  type="password"
+                  value={cronSecret}
+                  onChange={e => setCronSecret(e.target.value)}
+                  placeholder="Paste your CRON_SECRET here"
+                  style={{ padding: '0.45rem 0.7rem', borderRadius: '6px', border: '1px solid #fcd34d', fontSize: '0.9rem' }}
+                />
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleSendHolidayReminder(false)}
+                disabled={reminderLoading}
+                style={{ padding: '0.5rem 1.2rem', background: '#d97706', border: 'none' }}
+              >
+                {reminderLoading ? 'Sending...' : '📧 Send Test to My Email'}
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleSendHolidayReminder(true)}
+                disabled={reminderLoading}
+                style={{ padding: '0.5rem 1.2rem', background: '#92400e', border: 'none' }}
+              >
+                {reminderLoading ? 'Sending...' : '📣 Send to All Employees'}
+              </button>
+            </div>
+            {reminderResult && (
+              <div style={{
+                padding: '10px 14px', borderRadius: '6px', fontSize: '0.88rem', fontWeight: 500,
+                background: reminderResult.ok ? '#dcfce7' : '#fee2e2',
+                color: reminderResult.ok ? '#166534' : '#991b1b',
+              }}>
+                {reminderResult.message}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="tabs">
         <button
