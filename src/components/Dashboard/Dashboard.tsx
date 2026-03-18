@@ -125,6 +125,11 @@ const Dashboard: React.FC = () => {
     <div className="dashboard">
       <div className="page-header">
         <h1>Welcome, {userData?.name}!</h1>
+        {userData?.employeeId && (
+          <p style={{ margin: '0.15rem 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
+            Employee ID: {userData.employeeId}
+          </p>
+        )}
         <p>Manage your leaves and attendance from here</p>
       </div>
 

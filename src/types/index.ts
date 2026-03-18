@@ -10,6 +10,7 @@ export type LeaveStatus = 'pending_manager' | 'pending_hr' | 'approved' | 'rejec
 // User interface
 export interface User {
   uid: string;
+  employeeId?: string;
   name: string;
   email: string;
   role: UserRole;

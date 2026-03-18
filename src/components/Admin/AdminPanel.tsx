@@ -272,6 +272,7 @@ const AdminPanel: React.FC = () => {
                   <thead>
                     <tr>
                       <th>Name</th>
+                      <th>Emp ID</th>
                       <th>Email</th>
                       <th>Role</th>
                       <th>Annual Leave</th>
@@ -285,6 +286,7 @@ const AdminPanel: React.FC = () => {
                     {users.map((user) => (
                       <tr key={user.uid} className={!user.isActive ? 'inactive-row' : ''}>
                         <td>{user.name}</td>
+                        <td>{user.employeeId || '—'}</td>
                         <td>{user.email}</td>
                         <td>
                           <span className={`role-badge ${user.role}`}>
