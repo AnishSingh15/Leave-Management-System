@@ -11,8 +11,11 @@
 //   ZOHO_PASSWORD         — Zoho account password or App Password (if 2FA is on)
 //   CRON_SECRET           — Any random secret string; used to protect this endpoint
 
-import nodemailer from 'nodemailer';
+import { createRequire } from 'module';
 import { initializeApp, getApps } from 'firebase/app';
+
+const require = createRequire(import.meta.url);
+const nodemailer = require('nodemailer');
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 
 // ─── Holiday list (keep in sync with src/components/Calendar/LeaveCalendar.tsx) ─────
@@ -97,6 +100,15 @@ function buildEmailHtml(name, holidayName, dateStr) {
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
+  try {
+    return await _handler(req, res);
+  } catch (err) {
+    console.error('holiday-reminder unhandled error:', err);
+    return res.status(500).json({ error: 'Unhandled error', detail: err.message });
+  }
+}
+
+async function _handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).end();
   }
