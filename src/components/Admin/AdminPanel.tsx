@@ -240,7 +240,7 @@ const AdminPanel: React.FC = () => {
     setReminderResult(null);
     try {
       const body: Record<string, unknown> = { force: true };
-      if (!forceAll && userData?.email) body.testEmail = userData.email;
+      if (!forceAll) body.testEmail = 'anish@getmorph.com';
       const res = await fetch('/api/holiday-reminder', {
         method: 'POST',
         headers: {
@@ -255,7 +255,7 @@ const AdminPanel: React.FC = () => {
           ok: true,
           message: forceAll
             ? `✅ Sent to ${data.sent} employee(s): ${data.sentTo?.join(', ') || ''}`
-            : `✅ Test email sent to ${userData?.email}!`,
+            : `✅ Test email sent to anish@getmorph.com!`,
         });
       } else {
         setReminderResult({ ok: false, message: data.error || data.message || 'Unknown error' });

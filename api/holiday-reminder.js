@@ -1,13 +1,33 @@
-// api/holiday-reminder.js  –  Pure CommonJS (no ESM imports)
+// api/holiday-reminder.js  –  Pure CommonJS + Firebase Admin SDK
 // Sends holiday reminder emails to all active employees who have an employeeId.
 // Triggered by Vercel Cron (daily at 10 AM IST) or manually from Admin Panel.
+//
+// Required Vercel Environment Variables:
+//   FIREBASE_PROJECT_ID   — e.g. lams-622a7
+//   FIREBASE_CLIENT_EMAIL — service account email
+//   FIREBASE_PRIVATE_KEY  — service account private key (with \n)
+//   ZOHO_EMAIL            — Zoho Mail address to send from
+//   ZOHO_PASSWORD         — Zoho account/app password
+//   CRON_SECRET           — secret string to protect this endpoint
 
-const nodemailer = require('nodemailer');
-const { initializeApp, getApps } = require('firebase/app');
-const { getFirestore, collection, getDocs, query, where } = require('firebase/firestore');
+var admin = require('firebase-admin');
+var nodemailer = require('nodemailer');
+
+// ─── Firebase Admin init (bypasses Firestore security rules) ─────────────────
+function getAdminApp() {
+  if (admin.apps.length > 0) return admin.apps[0];
+  return admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId:   process.env.FIREBASE_PROJECT_ID   || process.env.REACT_APP_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      // Vercel stores \n as literal; replace to make the key valid
+      privateKey:  (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    }),
+  });
+}
 
 // ─── Holiday list (keep in sync with LeaveCalendar.tsx) ──────────────────────
-const NATIONAL_HOLIDAYS = [
+var NATIONAL_HOLIDAYS = [
   { date: '2026-01-01', name: 'New Year' },
   { date: '2026-01-15', name: 'Makara Sankranti' },
   { date: '2026-01-26', name: 'Republic Day' },
@@ -27,19 +47,6 @@ const NATIONAL_HOLIDAYS = [
   { date: '2026-12-24', name: 'Christmas Eve' },
   { date: '2026-12-25', name: 'Christmas' },
 ];
-
-// ─── Firebase init ───────────────────────────────────────────────────────────
-function getFirebaseApp() {
-  if (getApps().length > 0) return getApps()[0];
-  return initializeApp({
-    apiKey:            process.env.REACT_APP_FIREBASE_API_KEY,
-    authDomain:        process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-    projectId:         process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    storageBucket:     process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId:             process.env.REACT_APP_FIREBASE_APP_ID,
-  });
-}
 
 // ─── Email HTML template ─────────────────────────────────────────────────────
 function buildEmailHtml(name, holidayName, dateStr) {
@@ -108,17 +115,18 @@ module.exports = async function handler(req, res) {
 
     var effectiveHoliday = holiday || { name: 'Test Reminder', date: tomorrowStr };
 
-    // Fetch employees
+    // Fetch employees using Admin SDK (bypasses Firestore rules)
     var employees = [];
     try {
-      var app = getFirebaseApp();
-      var db = getFirestore(app);
-      var snapshot = await getDocs(
-        query(collection(db, 'users'), where('isActive', '==', true))
-      );
-      employees = snapshot.docs
-        .map(function (d) { return Object.assign({ uid: d.id }, d.data()); })
-        .filter(function (u) { return u.employeeId && u.email; });
+      var app = getAdminApp();
+      var db = admin.firestore(app);
+      var snapshot = await db.collection('users').where('isActive', '==', true).get();
+      snapshot.forEach(function (doc) {
+        var data = doc.data();
+        if (data.employeeId && data.email) {
+          employees.push({ uid: doc.id, name: data.name, email: data.email, employeeId: data.employeeId });
+        }
+      });
     } catch (err) {
       console.error('Firestore fetch error:', err);
       return res.status(500).json({ error: 'Failed to fetch employees', detail: err.message });
