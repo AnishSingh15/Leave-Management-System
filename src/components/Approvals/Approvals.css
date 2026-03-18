@@ -34,6 +34,15 @@
   color: #666;
 }
 
+.employee-emp-id {
+  display: block;
+  font-size: 0.78rem;
+  color: #2563eb;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
 .leave-type-badge {
   background-color: #2563eb;
   color: white;

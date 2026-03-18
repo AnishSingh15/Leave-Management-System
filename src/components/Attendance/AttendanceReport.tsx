@@ -258,16 +258,22 @@ const AttendanceReport: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {records.map((record) => (
+                                        {records.map((record) => {
+                                            const presentUser = allUsers.find(u => u.uid === record.employeeId);
+                                            return (
                                             <tr key={record.id}>
                                                 <td>
                                                     <strong>{record.employeeName}</strong>
+                                                    {presentUser?.employeeId && (
+                                                        <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 500 }}>{presentUser.employeeId}</div>
+                                                    )}
                                                 </td>
                                                 <td>
                                                     <span className="status-badge approved">Present</span>
                                                 </td>
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -308,7 +314,12 @@ const AttendanceReport: React.FC = () => {
                                     <tbody>
                                         {absentUsers.map((user) => (
                                             <tr key={user.uid} className="absent-row">
-                                                <td><strong>{user.name}</strong></td>
+                                                <td>
+                                                    <strong>{user.name}</strong>
+                                                    {user.employeeId && (
+                                                        <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 500 }}>{user.employeeId}</div>
+                                                    )}
+                                                </td>
                                                 <td>{user.email}</td>
                                                 <td>
                                                     <span className={`role-badge ${user.role}`}>

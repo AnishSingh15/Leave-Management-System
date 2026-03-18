@@ -136,6 +136,9 @@ const Navbar: React.FC = () => {
       <div className="navbar-user">
         <div className="user-info">
           <span className="user-name">{userData?.name}</span>
+          {userData?.employeeId && (
+            <span className="user-emp-id">{userData.employeeId}</span>
+          )}
           <span className="user-role">{userData?.role.replace('_', ' ').toUpperCase()}</span>
         </div>
         <button onClick={handleLogout} className="logout-button">

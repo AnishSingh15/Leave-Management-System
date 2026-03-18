@@ -26,12 +26,14 @@ import {
   getManagerReimbursementHistory,
   getHRReimbursementHistory
 } from '../../services/reimbursementService';
+import { getAllUsers } from '../../services/userService';
 import { LeaveRequest, MissedClockInRequest, ReimbursementRequest } from '../../types';
 import { format } from 'date-fns';
 import './Approvals.css';
 
 const Approvals: React.FC = () => {
   const { userData, isHRAdmin } = useAuth();
+  const [empIdMap, setEmpIdMap] = useState<Map<string, string>>(new Map());
   const [pendingLeaves, setPendingLeaves] = useState<LeaveRequest[]>([]);
   const [missedClockIns, setMissedClockIns] = useState<MissedClockInRequest[]>([]);
   const [pendingReimbursements, setPendingReimbursements] = useState<ReimbursementRequest[]>([]);
@@ -115,6 +117,11 @@ const Approvals: React.FC = () => {
 
   useEffect(() => {
     fetchPendingData();
+    getAllUsers().then(users => {
+      const map = new Map<string, string>();
+      users.forEach(u => { if (u.employeeId) map.set(u.uid, u.employeeId); });
+      setEmpIdMap(map);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData?.uid, isHRAdmin]);
 
@@ -254,6 +261,9 @@ const Approvals: React.FC = () => {
                 <div className="approval-header">
                   <div>
                     <h3>{leave.employeeName}</h3>
+                    {empIdMap.get(leave.employeeId) && (
+                      <span className="employee-emp-id">{empIdMap.get(leave.employeeId)}</span>
+                    )}
                     <span className="employee-email">{leave.employeeEmail}</span>
                   </div>
                   <span className="leave-type-badge">
@@ -358,6 +368,9 @@ const Approvals: React.FC = () => {
                 <div className="approval-header">
                   <div>
                     <h3>{req.employeeName}</h3>
+                    {empIdMap.get(req.employeeId) && (
+                      <span className="employee-emp-id">{empIdMap.get(req.employeeId)}</span>
+                    )}
                     <span className="employee-email">Missed Clock-In</span>
                   </div>
                   <span className="leave-type-badge missed-badge">
@@ -429,6 +442,9 @@ const Approvals: React.FC = () => {
                 <div className="approval-header">
                   <div>
                     <h3>{req.employeeName}</h3>
+                    {empIdMap.get(req.employeeId) && (
+                      <span className="employee-emp-id">{empIdMap.get(req.employeeId)}</span>
+                    )}
                     <span className="employee-email">{req.employeeEmail}</span>
                   </div>
                   <span className="leave-type-badge" style={{ background: '#059669' }}>
