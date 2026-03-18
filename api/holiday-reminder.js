@@ -3,12 +3,10 @@
 // Triggered by Vercel Cron (daily at 10 AM IST) or manually from Admin Panel.
 //
 // Required Vercel Environment Variables:
-//   FIREBASE_PROJECT_ID   — e.g. lams-622a7
-//   FIREBASE_CLIENT_EMAIL — service account email
-//   FIREBASE_PRIVATE_KEY  — service account private key (with \n)
-//   ZOHO_EMAIL            — Zoho Mail address to send from
-//   ZOHO_PASSWORD         — Zoho account/app password
-//   CRON_SECRET           — secret string to protect this endpoint
+//   FIREBASE_SERVICE_ACCOUNT — Full JSON from the downloaded service account key file
+//   ZOHO_EMAIL               — Zoho Mail address to send from
+//   ZOHO_PASSWORD            — Zoho account/app password
+//   CRON_SECRET              — secret string to protect this endpoint
 
 var admin = require('firebase-admin');
 var nodemailer = require('nodemailer');
@@ -16,13 +14,9 @@ var nodemailer = require('nodemailer');
 // ─── Firebase Admin init (bypasses Firestore security rules) ─────────────────
 function getAdminApp() {
   if (admin.apps.length > 0) return admin.apps[0];
+  var serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   return admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId:   process.env.FIREBASE_PROJECT_ID   || process.env.REACT_APP_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Vercel stores \n as literal; replace to make the key valid
-      privateKey:  (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-    }),
+    credential: admin.credential.cert(serviceAccount),
   });
 }
 
