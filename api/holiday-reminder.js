@@ -146,8 +146,9 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'ZOHO_EMAIL or ZOHO_PASSWORD not configured.' });
     }
 
+    var smtpHost = process.env.ZOHO_SMTP_HOST || 'smtppro.zoho.com';
     var transporter = nodemailer.createTransport({
-      host: 'smtppro.zoho.in',
+      host: smtpHost,
       port: 465,
       secure: true,
       auth: { user: zohoEmail, pass: zohoPass },
