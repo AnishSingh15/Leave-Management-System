@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   let finalBlocks = [...blocks];
 
   if (leaveId && approvalType) {
-    const lamsUrl = 'https://leave-management-system-nine-chi.vercel.app/approvals';
+    const lamsUrl = 'https://leaveportal-murex.vercel.app/login';
     finalBlocks.push({
       type: 'section',
       text: {

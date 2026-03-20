@@ -200,7 +200,7 @@ export default async function handler(req, res) {
         });
 
         // Add link to LAMS approvals page for HR
-        const lamsUrl = 'https://leave-management-system-nine-chi.vercel.app/approvals';
+        const lamsUrl = 'https://leaveportal-murex.vercel.app/login';
         hrBlocks.push({
           type: 'section',
           text: {
