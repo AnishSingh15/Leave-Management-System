@@ -18,7 +18,8 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Missed clock-in state
-  const [missedDate, setMissedDate] = useState('');
+  const [missedStartDate, setMissedStartDate] = useState('');
+  const [missedEndDate, setMissedEndDate] = useState('');
   const [missedManagerId, setMissedManagerId] = useState('');
   const [managers, setManagers] = useState<User[]>([]);
   const [missedRequests, setMissedRequests] = useState<MissedClockInRequest[]>([]);
@@ -97,8 +98,12 @@ const Dashboard: React.FC = () => {
     e.preventDefault();
     setMissedError('');
     setMissedSuccess('');
-    if (!missedDate || !missedManagerId) {
-      setMissedError('Please select both a date and a manager.');
+    if (!missedStartDate || !missedEndDate || !missedManagerId) {
+      setMissedError('Please select start date, end date, and a manager.');
+      return;
+    }
+    if (missedEndDate < missedStartDate) {
+      setMissedError('End date must be on or after start date.');
       return;
     }
     const selectedManager = managers.find(m => m.uid === missedManagerId);
@@ -106,9 +111,10 @@ const Dashboard: React.FC = () => {
 
     setMissedLoading(true);
     try {
-      await submitMissedClockIn(userData, missedDate, missedManagerId, selectedManager.name);
+      await submitMissedClockIn(userData, missedStartDate, missedEndDate, missedManagerId, selectedManager.name);
       setMissedSuccess('Request submitted! Waiting for manager approval.');
-      setMissedDate('');
+      setMissedStartDate('');
+      setMissedEndDate('');
       setMissedManagerId('');
       const missed = await getEmployeeMissedClockIns(userData.uid);
       setMissedRequests(missed);
@@ -178,22 +184,56 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Rules & Regulations */}
+      <div className="card" style={{ marginBottom: '1.5rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+        <div style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.4rem' }}>📋</span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', color: '#1e293b' }}>Rules & Regulations</h3>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>Company policies and guidelines</p>
+            </div>
+          </div>
+          <a
+            href="/rules-and-regulations.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+            style={{ padding: '0.45rem 1.2rem', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}
+          >
+            View PDF
+          </a>
+        </div>
+      </div>
+
       {/* Missed Clock-In Request */}
       <div className="card" style={{ marginBottom: '1.5rem' }}>
         <div className="card-header">
           <h2>Missed Attendance Request</h2>
         </div>
         <div style={{ padding: '0 1.5rem 1.5rem' }}>
-          <p style={{ color: '#64748b', margin: '0 0 1rem' }}>Forgot to clock in on a past date? Submit a request for manager approval.</p>
+          <p style={{ color: '#64748b', margin: '0 0 1rem' }}>Forgot to clock in? Submit a request for manager approval. Select a date range for multiple days.</p>
           {missedError && <div style={{ color: '#dc2626', background: '#fee2e2', padding: '8px 12px', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>{missedError}</div>}
           {missedSuccess && <div style={{ color: '#166534', background: '#dcfce7', padding: '8px 12px', borderRadius: '6px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>{missedSuccess}</div>}
           <form onSubmit={handleMissedSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 180px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Date *</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 160px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Start Date *</label>
               <input
                 type="date"
-                value={missedDate}
-                onChange={(e) => setMissedDate(e.target.value)}
+                value={missedStartDate}
+                onChange={(e) => setMissedStartDate(e.target.value)}
+                max={yesterday}
+                required
+                style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 1 160px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>End Date *</label>
+              <input
+                type="date"
+                value={missedEndDate}
+                onChange={(e) => setMissedEndDate(e.target.value)}
+                min={missedStartDate}
                 max={yesterday}
                 required
                 style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
@@ -230,7 +270,7 @@ const Dashboard: React.FC = () => {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
+                      <th>Dates</th>
                       <th>Manager</th>
                       <th>Status</th>
                     </tr>
@@ -238,7 +278,12 @@ const Dashboard: React.FC = () => {
                   <tbody>
                     {missedRequests.slice(0, 5).map((req) => (
                       <tr key={req.id}>
-                        <td>{format(new Date(req.date + 'T00:00:00'), 'dd MMM yyyy')}</td>
+                        <td>
+                          {format(new Date(req.date + 'T00:00:00'), 'dd MMM yyyy')}
+                          {req.endDate && req.endDate !== req.date && (
+                            <> – {format(new Date(req.endDate + 'T00:00:00'), 'dd MMM yyyy')}</>
+                          )}
+                        </td>
                         <td>{req.managerName}</td>
                         <td>
                           <span className={`status-badge ${req.status === 'approved' ? 'approved' : req.status === 'rejected' ? 'rejected' : 'pending_manager'}`}>

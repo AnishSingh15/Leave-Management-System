@@ -65,6 +65,7 @@ const convertMissedClockInDoc = (docSnap: any): MissedClockInRequest => {
         employeeId: data.employeeId,
         employeeName: data.employeeName,
         date: data.date,
+        endDate: data.endDate || data.date,
         reason: data.reason,
         managerId: data.managerId,
         managerName: data.managerName,
@@ -196,43 +197,68 @@ export const getUserAttendanceHistory = async (
 // Missed Clock-In Functions
 // ============================
 
-// Submit a missed clock-in request
+// Submit a missed clock-in request (supports date range)
 export const submitMissedClockIn = async (
     user: User,
-    date: string,
+    startDate: string,
+    endDate: string,
     managerId: string,
     managerName: string
 ): Promise<void> => {
     const today = getTodayIST();
 
-    // Validate: date must be in the past
-    if (date >= today) {
+    // Validate: dates must be in the past
+    if (startDate >= today) {
         throw new Error('Missed clock-in can only be applied for past dates.');
     }
-
-    // Check if attendance already exists for that date
-    const docId = buildDocId(user.uid, date);
-    const existingAttendance = await getDoc(doc(db, 'attendance', docId));
-    if (existingAttendance.exists()) {
-        throw new Error('You already have an attendance record for this date.');
+    if (endDate >= today) {
+        throw new Error('End date must be in the past.');
+    }
+    if (endDate < startDate) {
+        throw new Error('End date must be on or after start date.');
     }
 
-    // Check if a pending request already exists for this date
-    const q = query(
-        collection(db, 'missedClockIns'),
-        where('employeeId', '==', user.uid),
-        where('date', '==', date),
-        where('status', '==', 'pending')
-    );
-    const existing = await getDocs(q);
-    if (!existing.empty) {
-        throw new Error('You already have a pending missed clock-in request for this date.');
+    // Collect all weekday dates in range
+    const dates: string[] = [];
+    const current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    while (current <= end) {
+        const dayOfWeek = current.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // skip weekends
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
+
+    if (dates.length === 0) {
+        throw new Error('No weekdays found in the selected date range.');
+    }
+
+    // Check each date for existing attendance or pending requests
+    for (const date of dates) {
+        const docId = buildDocId(user.uid, date);
+        const existingAttendance = await getDoc(doc(db, 'attendance', docId));
+        if (existingAttendance.exists()) {
+            throw new Error(`You already have an attendance record for ${date}.`);
+        }
+
+        const q = query(
+            collection(db, 'missedClockIns'),
+            where('employeeId', '==', user.uid),
+            where('date', '==', date),
+            where('status', '==', 'pending')
+        );
+        const existing = await getDocs(q);
+        if (!existing.empty) {
+            throw new Error(`You already have a pending missed clock-in request covering ${date}.`);
+        }
     }
 
     await addDoc(collection(db, 'missedClockIns'), {
         employeeId: user.uid,
         employeeName: user.name,
-        date,
+        date: startDate,
+        endDate: endDate,
         managerId,
         managerName,
         status: 'pending',
@@ -304,7 +330,7 @@ export const getEmployeeMissedClockIns = async (userId: string): Promise<MissedC
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 };
 
-// Approve missed clock-in → create attendance record
+// Approve missed clock-in → create attendance records for all dates in range
 export const approveMissedClockIn = async (
     requestId: string,
     comment: string
@@ -317,22 +343,37 @@ export const approveMissedClockIn = async (
 
     if (request.status !== 'pending') throw new Error('Request is no longer pending');
 
-    // Create attendance record for the missed date
-    const docId = buildDocId(request.employeeId, request.date);
-    const clockOutTime = get7PMISTForDate(request.date);
-    // Use 11 AM IST as default clock-in time for missed entries
-    const clockInTime = new Date(`${request.date}T05:30:00.000Z`); // 11 AM IST = 5:30 UTC
+    // Collect all weekday dates in range
+    const startDate = request.date;
+    const endDate = request.endDate || request.date;
+    const dates: string[] = [];
+    const current = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    while (current <= end) {
+        const dayOfWeek = current.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            dates.push(current.toISOString().split('T')[0]);
+        }
+        current.setDate(current.getDate() + 1);
+    }
 
-    await setDoc(doc(db, 'attendance', docId), {
-        employeeId: request.employeeId,
-        employeeName: request.employeeName,
-        date: request.date,
-        clockInTime: Timestamp.fromDate(clockInTime),
-        clockOutTime: Timestamp.fromDate(clockOutTime),
-        status: 'auto_logged_out',
-        isMissedClockIn: true,
-        createdAt: serverTimestamp(),
-    });
+    // Create attendance record for each date
+    for (const date of dates) {
+        const docId = buildDocId(request.employeeId, date);
+        const clockOutTime = get7PMISTForDate(date);
+        const clockInTime = new Date(`${date}T05:30:00.000Z`); // 11 AM IST
+
+        await setDoc(doc(db, 'attendance', docId), {
+            employeeId: request.employeeId,
+            employeeName: request.employeeName,
+            date,
+            clockInTime: Timestamp.fromDate(clockInTime),
+            clockOutTime: Timestamp.fromDate(clockOutTime),
+            status: 'auto_logged_out',
+            isMissedClockIn: true,
+            createdAt: serverTimestamp(),
+        });
+    }
 
     // Update request status
     await updateDoc(reqRef, {

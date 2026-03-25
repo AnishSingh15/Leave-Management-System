@@ -22,7 +22,8 @@ const MarkAttendance: React.FC = () => {
     const [success, setSuccess] = useState('');
 
     // Missed clock-in state
-    const [missedDate, setMissedDate] = useState('');
+    const [missedStartDate, setMissedStartDate] = useState('');
+    const [missedEndDate, setMissedEndDate] = useState('');
     const [missedManagerId, setMissedManagerId] = useState('');
     const [managers, setManagers] = useState<User[]>([]);
     const [submittingMissed, setSubmittingMissed] = useState(false);
@@ -100,8 +101,13 @@ const MarkAttendance: React.FC = () => {
         setMissedError('');
         setMissedSuccess('');
 
-        if (!missedDate || !missedManagerId) {
+        if (!missedStartDate || !missedEndDate || !missedManagerId) {
             setMissedError('Please fill all fields.');
+            return;
+        }
+
+        if (missedEndDate < missedStartDate) {
+            setMissedError('End date must be on or after start date.');
             return;
         }
 
@@ -113,9 +119,10 @@ const MarkAttendance: React.FC = () => {
 
         setSubmittingMissed(true);
         try {
-            await submitMissedClockIn(userData, missedDate, missedManagerId, selectedManager.name);
+            await submitMissedClockIn(userData, missedStartDate, missedEndDate, missedManagerId, selectedManager.name);
             setMissedSuccess('Missed clock-in request submitted for manager approval! ✅');
-            setMissedDate('');
+            setMissedStartDate('');
+            setMissedEndDate('');
             setMissedManagerId('');
 
             // Refresh requests
@@ -219,7 +226,7 @@ const MarkAttendance: React.FC = () => {
                 <div className="card-header">
                     <h2>📝 Apply for Missed Clock-In</h2>
                 </div>
-                <p className="missed-desc">Forgot to clock in on a past date? Submit a request for manager approval.</p>
+                <p className="missed-desc">Forgot to clock in? Submit a request for manager approval. Select a date range for multiple days.</p>
 
                 {missedError && <div className="attendance-error">{missedError}</div>}
                 {missedSuccess && <div className="attendance-success">{missedSuccess}</div>}
@@ -227,12 +234,24 @@ const MarkAttendance: React.FC = () => {
                 <form className="missed-form" onSubmit={handleMissedSubmit}>
                     <div className="form-row">
                         <div className="form-group">
-                            <label htmlFor="missed-date">Date *</label>
+                            <label htmlFor="missed-start-date">Start Date *</label>
                             <input
-                                id="missed-date"
+                                id="missed-start-date"
                                 type="date"
-                                value={missedDate}
-                                onChange={(e) => setMissedDate(e.target.value)}
+                                value={missedStartDate}
+                                onChange={(e) => setMissedStartDate(e.target.value)}
+                                max={getYesterdayIST()}
+                                required
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="missed-end-date">End Date *</label>
+                            <input
+                                id="missed-end-date"
+                                type="date"
+                                value={missedEndDate}
+                                onChange={(e) => setMissedEndDate(e.target.value)}
+                                min={missedStartDate}
                                 max={getYesterdayIST()}
                                 required
                             />
@@ -271,7 +290,7 @@ const MarkAttendance: React.FC = () => {
                             <table className="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Date</th>
+                                        <th>Dates</th>
                                         <th>Manager</th>
                                         <th>Status</th>
                                         <th>Comment</th>
@@ -280,7 +299,12 @@ const MarkAttendance: React.FC = () => {
                                 <tbody>
                                     {missedRequests.map((req) => (
                                         <tr key={req.id}>
-                                            <td>{format(new Date(req.date + 'T00:00:00'), 'MMM dd, yyyy')}</td>
+                                            <td>
+                                                {format(new Date(req.date + 'T00:00:00'), 'MMM dd, yyyy')}
+                                                {req.endDate && req.endDate !== req.date && (
+                                                    <> – {format(new Date(req.endDate + 'T00:00:00'), 'MMM dd, yyyy')}</>
+                                                )}
+                                            </td>
                                             <td>{req.managerName}</td>
                                             <td>
                                                 <span className={`status-badge ${getMissedStatusBadge(req.status)}`}>

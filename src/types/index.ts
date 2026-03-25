@@ -134,7 +134,8 @@ export interface MissedClockInRequest {
   id: string;
   employeeId: string;
   employeeName: string;
-  date: string;               // "YYYY-MM-DD" — the date they missed
+  date: string;               // "YYYY-MM-DD" — kept for backward compat (single date = startDate)
+  endDate?: string;           // "YYYY-MM-DD" — end of range (if missing, same as date)
   reason?: string;            // optional now
   managerId: string;
   managerName: string;

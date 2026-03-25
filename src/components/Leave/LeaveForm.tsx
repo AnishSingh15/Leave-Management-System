@@ -263,7 +263,6 @@ const LeaveForm: React.FC = () => {
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
-                min={new Date().toISOString().split('T')[0]}
                 required
               />
             </div>
@@ -277,7 +276,7 @@ const LeaveForm: React.FC = () => {
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleChange}
-                  min={formData.startDate || new Date().toISOString().split('T')[0]}
+                  min={formData.startDate}
                   required
                 />
               </div>

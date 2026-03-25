@@ -50,10 +50,10 @@ export const getManagers = async (): Promise<User[]> => {
   );
   const snapshot = await getDocs(q);
   const allUsers = snapshot.docs.map(convertUserDoc);
-  
-  // Filter for managers and hr_admin, then sort by name
+
+  // Filter for managers only (not hr_admin), then sort by name
   return allUsers
-    .filter(user => user.role === 'manager' || user.role === 'hr_admin')
+    .filter(user => user.role === 'manager')
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 
@@ -75,7 +75,7 @@ export const updateUserRole = async (
 ): Promise<void> => {
   const userRef = doc(db, 'users', userId);
   const userDoc = await getDoc(userRef);
-  
+
   if (!userDoc.exists()) {
     throw new Error('User not found');
   }
@@ -111,7 +111,7 @@ export const adjustCompOffBalance = async (
 ): Promise<void> => {
   const userRef = doc(db, 'users', userId);
   const userDoc = await getDoc(userRef);
-  
+
   if (!userDoc.exists()) {
     throw new Error('User not found');
   }
@@ -152,7 +152,7 @@ export const adjustAnnualLeaveBalance = async (
 ): Promise<void> => {
   const userRef = doc(db, 'users', userId);
   const userDoc = await getDoc(userRef);
-  
+
   if (!userDoc.exists()) {
     throw new Error('User not found');
   }
@@ -191,7 +191,7 @@ export const toggleUserStatus = async (
 ): Promise<void> => {
   const userRef = doc(db, 'users', userId);
   const userDoc = await getDoc(userRef);
-  
+
   if (!userDoc.exists()) {
     throw new Error('User not found');
   }
@@ -259,7 +259,7 @@ export const getAuditLogs = async (limit: number = 100): Promise<AuditLog[]> => 
     collection(db, 'auditLogs'),
     orderBy('timestamp', 'desc')
   );
-  
+
   const snapshot = await getDocs(q);
   return snapshot.docs.slice(0, limit).map(doc => {
     const data = doc.data();

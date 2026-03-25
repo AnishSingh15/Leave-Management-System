@@ -10,7 +10,6 @@ import {
 } from '../../services/leaveService';
 import {
   getPendingMissedClockIns,
-  getAllPendingMissedClockIns,
   approveMissedClockIn,
   rejectMissedClockIn,
   getManagerMissedClockInHistory,
@@ -66,13 +65,13 @@ const Approvals: React.FC = () => {
 
       if (isHRAdmin) {
         // Fetch both HR queues and Manager queues for HR admins
+        // Missed clock-ins only need the selected manager's approval, so only fetch manager-assigned ones
         const [
-          hrLeaves, hrMissed, hrReimbs,
+          hrLeaves, hrReimbs,
           mgrLeaves, mgrMissed, mgrReimbs,
           fetchedHLeaves, fetchedHMissed, fetchedHReimbs
         ] = await Promise.all([
           getHRPendingLeaves(),
-          getAllPendingMissedClockIns(),
           getAllPendingReimbursements(),
           getManagerPendingLeaves(userData.uid),
           getPendingMissedClockIns(userData.uid),
@@ -84,7 +83,7 @@ const Approvals: React.FC = () => {
 
         // Merge and deduplicate just in case
         leaves = [...hrLeaves, ...mgrLeaves.filter(m => !hrLeaves.find(h => h.id === m.id))];
-        missed = [...hrMissed, ...mgrMissed.filter(m => !hrMissed.find(h => h.id === m.id))];
+        missed = mgrMissed;
         reimbs = [...hrReimbs, ...mgrReimbs.filter(m => !hrReimbs.find(h => h.id === m.id))];
 
         hLeaves = fetchedHLeaves;
@@ -381,9 +380,11 @@ const Approvals: React.FC = () => {
                 <div className="approval-body">
                   <div className="approval-row">
                     <div className="approval-detail">
-                      <span className="label">Date</span>
+                      <span className="label">Dates</span>
                       <span className="value">
                         {format(new Date(req.date + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}
+                        {req.endDate && req.endDate !== req.date && (
+                          <> – {format(new Date(req.endDate + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}</>)}
                       </span>
                     </div>
                     <div className="approval-detail">
@@ -601,8 +602,12 @@ const Approvals: React.FC = () => {
                     </div>
                     <div className="approval-body">
                       <div className="approval-detail">
-                        <span className="label">Date</span>
-                        <span className="value">{format(new Date(req.date + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}</span>
+                        <span className="label">Dates</span>
+                        <span className="value">
+                          {format(new Date(req.date + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}
+                          {req.endDate && req.endDate !== req.date && (
+                            <> – {format(new Date(req.endDate + 'T00:00:00'), 'MMM dd, yyyy')}</>)}
+                        </span>
                       </div>
                     </div>
                     <div className="approval-footer">
@@ -709,7 +714,10 @@ const Approvals: React.FC = () => {
                 )}
                 {selectedMissed && (
                   <>
-                    <p><strong>Date:</strong> {format(new Date(selectedMissed.date + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}</p>
+                    <p><strong>Dates:</strong> {format(new Date(selectedMissed.date + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}
+                      {selectedMissed.endDate && selectedMissed.endDate !== selectedMissed.date && (
+                        <> – {format(new Date(selectedMissed.endDate + 'T00:00:00'), 'EEEE, MMM dd, yyyy')}</>)}
+                    </p>
                   </>
                 )}
                 {selectedReimb && (
