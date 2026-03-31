@@ -355,7 +355,10 @@ export const approveMissedClockIn = async (
     while (current <= end) {
         const dayOfWeek = current.getDay();
         if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-            dates.push(current.toISOString().split('T')[0]);
+            const y = current.getFullYear();
+            const m = String(current.getMonth() + 1).padStart(2, '0');
+            const d = String(current.getDate()).padStart(2, '0');
+            dates.push(`${y}-${m}-${d}`);
         }
         current.setDate(current.getDate() + 1);
     }
