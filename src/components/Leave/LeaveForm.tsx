@@ -165,7 +165,6 @@ const LeaveForm: React.FC = () => {
   const isExtraWork = formData.leaveType === 'extra_work';
   const isMenstrual = formData.leaveType === 'menstrual';
   const isBereavement = formData.leaveType === 'bereavement';
-  const isSickLeave = formData.leaveType === 'sick';
   const noDeduction = isWFH || isExtraWork || isMenstrual || isBereavement;
   const compOffDisabled = !userData?.compOffBalance || userData.compOffBalance <= 0;
   const annualLeaveDisabled = !userData?.annualLeaveBalance || userData.annualLeaveBalance <= 0;
