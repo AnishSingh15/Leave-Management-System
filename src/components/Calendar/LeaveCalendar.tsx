@@ -24,6 +24,7 @@ export const NATIONAL_HOLIDAYS: { date: string; name: string }[] = [
   { date: '2026-03-19', name: 'Ugadi' },
   { date: '2026-03-26', name: 'Ram Navami' },
   { date: '2026-04-03', name: 'Good Friday' },
+  { date: '2026-05-01', name: 'Labour Day' },
   { date: '2026-05-28', name: 'Bakrid' },
   { date: '2026-06-26', name: 'Last day of Muharram' },
   { date: '2026-08-26', name: 'Eid-Milad' },
