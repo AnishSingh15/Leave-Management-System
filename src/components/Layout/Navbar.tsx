@@ -125,6 +125,15 @@ const Navbar: React.FC = () => {
 
         {isManager && (
           <Link
+            to="/leave-summary"
+            className={`nav-link ${isActive('/leave-summary') ? 'active' : ''}`}
+          >
+            Leave Summary
+          </Link>
+        )}
+
+        {isManager && (
+          <Link
             to="/admin"
             className={`nav-link ${isActive('/admin') ? 'active' : ''}`}
           >

@@ -13,6 +13,7 @@ import AdminPanel from './components/Admin/AdminPanel';
 import MarkAttendance from './components/Attendance/MarkAttendance';
 import AttendanceReport from './components/Attendance/AttendanceReport';
 import Reimbursement from './components/Reimbursement/Reimbursement';
+import LeaveSummary from './components/Leave/LeaveSummary';
 import './App.css';
 
 // Protected Route wrapper
@@ -157,6 +158,17 @@ const AppRoutes: React.FC = () => {
             <ManagerRoute>
               <AttendanceReport />
             </ManagerRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/leave-summary"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <LeaveSummary />
+            </AdminRoute>
           </ProtectedRoute>
         }
       />
