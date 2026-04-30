@@ -31,8 +31,7 @@ const LeaveSummary: React.FC = () => {
         ]);
 
         const activeUsers = allUsers
-          .filter((u) => u.isActive)
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .filter((u) => u.isActive);
 
         // Filter to approved leaves in the selected year
         const yearLeaves = allLeaves.filter((l: LeaveRequest) => {
