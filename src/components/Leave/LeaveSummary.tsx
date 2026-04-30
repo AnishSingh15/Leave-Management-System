@@ -31,7 +31,8 @@ const LeaveSummary: React.FC = () => {
         ]);
 
         const activeUsers = allUsers
-          .filter((u) => u.isActive);
+          .filter((u) => u.isActive)
+          .sort((a, b) => a.name.localeCompare(b.name));
 
         // Filter to approved leaves in the selected year
         const yearLeaves = allLeaves.filter((l: LeaveRequest) => {
@@ -110,12 +111,12 @@ const LeaveSummary: React.FC = () => {
             </div>
           ) : (
             <div className="table-container">
-              <table className="data-table">
+              <table className="data-table" style={{ borderCollapse: 'collapse', width: '100%' }}>
                 <thead>
                   <tr>
-                    <th>Employee</th>
+                    <th style={{ border: '1px solid #cbd5e1', padding: '10px' }}>Employee</th>
                     {LEAVE_COLUMNS.map((col) => (
-                      <th key={col.key} style={{ textAlign: 'center' }}>
+                      <th key={col.key} style={{ textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px' }}>
                         {col.label}
                       </th>
                     ))}
@@ -124,11 +125,11 @@ const LeaveSummary: React.FC = () => {
                 <tbody>
                   {summary.map((row) => (
                     <tr key={row.user.uid}>
-                      <td>
+                      <td style={{ border: '1px solid #cbd5e1', padding: '10px' }}>
                         <strong>{row.user.name}</strong>
                       </td>
                       {LEAVE_COLUMNS.map((col) => (
-                        <td key={col.key} style={{ textAlign: 'center' }}>
+                        <td key={col.key} style={{ textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px' }}>
                           {row.counts[col.key] || ''}
                         </td>
                       ))}
