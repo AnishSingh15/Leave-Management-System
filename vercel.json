@@ -6,6 +6,10 @@
     {
       "path": "/api/holiday-reminder",
       "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/increment-annual-leave",
+      "schedule": "30 18 28-31 * *"
     }
   ],
   "rewrites": [

@@ -32,6 +32,8 @@ const AdminPanel: React.FC = () => {
   // Holiday reminder test state
   const [reminderLoading, setReminderLoading] = useState(false);
   const [reminderResult, setReminderResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [incrementLoading, setIncrementLoading] = useState(false);
+  const [incrementResult, setIncrementResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [cronSecret, setCronSecret] = useState('');
 
   const fetchData = async () => {
@@ -267,6 +269,35 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const handleIncrementLeave = async () => {
+    if (!cronSecret.trim()) {
+      setIncrementResult({ ok: false, message: 'Please enter the CRON_SECRET from your Vercel environment variables.' });
+      return;
+    }
+    if (!window.confirm('This will add 2 annual leave days to ALL active employees. Are you sure?')) return;
+    setIncrementLoading(true);
+    setIncrementResult(null);
+    try {
+      const res = await fetch('/api/increment-annual-leave', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cronSecret}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setIncrementResult({ ok: true, message: `✅ Added 2 annual leave days to ${data.updatedCount} employee(s).` });
+      } else {
+        setIncrementResult({ ok: false, message: data.error || data.message || 'Unknown error' });
+      }
+    } catch (err: any) {
+      setIncrementResult({ ok: false, message: err.message || 'Network error' });
+    } finally {
+      setIncrementLoading(false);
+    }
+  };
+
   return (
     <div className="admin-panel">
       <div className="page-header">
@@ -320,6 +351,41 @@ const AdminPanel: React.FC = () => {
                 color: reminderResult.ok ? '#166534' : '#991b1b',
               }}>
                 {reminderResult.message}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Annual Leave Increment Section */}
+      {userData?.role === 'master_admin' && (
+        <div className="card" style={{ marginBottom: '1.5rem', background: '#f0fdf4', border: '1px solid #86efac' }}>
+          <div className="card-header" style={{ borderBottom: '1px solid #86efac' }}>
+            <h2 style={{ color: '#166534' }}>📅 Monthly Annual Leave Increment</h2>
+          </div>
+          <div style={{ padding: '1.25rem 1.5rem' }}>
+            <p style={{ margin: '0 0 1rem', color: '#15803d', fontSize: '0.92rem' }}>
+              Adds <strong>2 annual leave days</strong> to every active employee's balance.
+              The cron runs automatically on the <strong>1st of every month at 12:00 AM IST</strong>.
+              Use the button below to trigger manually.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end', marginBottom: '0.75rem' }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleIncrementLeave}
+                disabled={incrementLoading}
+                style={{ padding: '0.5rem 1.4rem', background: '#16a34a', border: 'none' }}
+              >
+                {incrementLoading ? 'Updating...' : '➕ Add 2 Days to All Employees'}
+              </button>
+            </div>
+            {incrementResult && (
+              <div style={{
+                padding: '10px 14px', borderRadius: '6px', fontSize: '0.88rem', fontWeight: 500,
+                background: incrementResult.ok ? '#dcfce7' : '#fee2e2',
+                color: incrementResult.ok ? '#166534' : '#991b1b',
+              }}>
+                {incrementResult.message}
               </div>
             )}
           </div>
