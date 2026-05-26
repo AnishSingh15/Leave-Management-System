@@ -51,9 +51,9 @@ export const getManagers = async (): Promise<User[]> => {
   const snapshot = await getDocs(q);
   const allUsers = snapshot.docs.map(convertUserDoc);
 
-  // Filter for managers only (not hr_admin), then sort by name
+  // Filter for managers and HR admins, then sort by name
   return allUsers
-    .filter(user => user.role === 'manager')
+    .filter(user => ['manager', 'hr_admin', 'master_admin'].includes(user.role))
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 

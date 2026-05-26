@@ -164,8 +164,7 @@ const LeaveForm: React.FC = () => {
   const isWFH = formData.leaveType === 'wfh';
   const isExtraWork = formData.leaveType === 'extra_work';
   const isMenstrual = formData.leaveType === 'menstrual';
-  const isBereavement = formData.leaveType === 'bereavement';
-  const noDeduction = isWFH || isExtraWork || isMenstrual || isBereavement;
+  const noDeduction = isWFH || isExtraWork || isMenstrual;
   const compOffDisabled = !userData?.compOffBalance || userData.compOffBalance <= 0;
   const annualLeaveDisabled = !userData?.annualLeaveBalance || userData.annualLeaveBalance <= 0;
 
@@ -225,12 +224,11 @@ const LeaveForm: React.FC = () => {
                 onChange={handleChange}
                 required
               >
+                <option value="earned">Earned Leave</option>
                 <option value="casual">Casual Leave</option>
-                <option value="sick">Sick Leave</option>
                 <option value="wfh">Work From Home</option>
                 <option value="extra_work">Extra Day Work — Weekend / Holiday (Earn Comp Off)</option>
                 <option value="menstrual">Menstrual Leave (Monthly 1 day)</option>
-                <option value="bereavement">Bereavement Leave (Yearly)</option>
               </select>
             </div>
 

@@ -91,8 +91,8 @@ const AttendanceReport: React.FC = () => {
             // Build a lookup: employeeId -> date -> leaveType (for approved leaves)
             const leaveMap = new Map<string, Map<string, string>>();
             const leaveTypes: Record<string, string> = {
-                casual: 'Casual Leave', wfh: 'WFH', extra_work: 'Extra Work',
-                menstrual: 'Menstrual Leave', bereavement: 'Bereavement Leave', paid: 'Paid Leave', sick: 'Sick Leave', comp_off: 'Comp Off'
+                earned: 'Earned Leave', casual: 'Casual Leave', wfh: 'WFH', extra_work: 'Extra Work',
+                menstrual: 'Menstrual Leave', paid: 'Paid Leave', comp_off: 'Comp Off'
             };
             allLeaves.filter(l => l.status === 'approved').forEach(leave => {
                 if (!leaveMap.has(leave.employeeId)) {

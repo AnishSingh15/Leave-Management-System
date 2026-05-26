@@ -35,14 +35,13 @@ const LeaveHistory: React.FC = () => {
 
   const formatLeaveType = (type: string) => {
     const types: Record<string, string> = {
+      earned: 'Earned Leave',
       casual: 'Casual Leave',
       paid: 'Paid Leave',
-      sick: 'Sick Leave',
       comp_off: 'Comp Off',
       wfh: 'WFH',
       extra_work: 'Extra Day Work',
       menstrual: 'Menstrual Leave',
-      bereavement: 'Bereavement Leave'
     };
     return types[type] || type.replace(/_/g, ' ').toUpperCase();
   };

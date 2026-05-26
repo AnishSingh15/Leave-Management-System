@@ -76,14 +76,13 @@ const Dashboard: React.FC = () => {
 
   const formatLeaveType = (type: string) => {
     const types: Record<string, string> = {
+      earned: 'Earned Leave',
       casual: 'Casual Leave',
       paid: 'Paid Leave',
-      sick: 'Sick Leave',
       comp_off: 'Comp Off',
       wfh: 'WFH',
       extra_work: 'Extra Day Work',
       menstrual: 'Menstrual Leave',
-      bereavement: 'Bereavement Leave'
     };
     return types[type] || type.replace(/_/g, ' ').toUpperCase();
   };
@@ -390,7 +389,7 @@ const Dashboard: React.FC = () => {
           <ul>
             <li>Comp Off will be deducted first if selected</li>
             <li>Annual Leave will be deducted for remaining days</li>
-            <li>Work From Home (WFH) does not affect leave balance</li>
+            <li>A WFH day with no assigned work will be treated as a leave day or compensatory off"</li>
 
           </ul>
         </div>

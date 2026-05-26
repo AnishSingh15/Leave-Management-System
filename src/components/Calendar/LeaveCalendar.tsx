@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   startOfMonth,
   endOfMonth,
@@ -10,8 +10,13 @@ import {
   format,
   isSameMonth,
   isWeekend,
-  isToday
+  isToday,
+  isBefore,
+  startOfDay
 } from 'date-fns';
+import { getUserAttendanceHistory } from '../../services/attendanceService';
+import { AttendanceRecord } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 import './LeaveCalendar.css';
 
 // National holidays — update this list as needed
@@ -43,13 +48,39 @@ interface LeaveCalendarProps {
 }
 
 const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ compact = false }) => {
+  const { userData } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [attendanceMap, setAttendanceMap] = useState<Map<string, AttendanceRecord>>(new Map());
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   const holidayMap = useMemo(() => {
     const map = new Map<string, string>();
     NATIONAL_HOLIDAYS.forEach(h => map.set(h.date, h.name));
     return map;
   }, []);
+
+  // Fetch attendance for current month whenever month or user changes
+  useEffect(() => {
+    if (!userData?.uid) return;
+
+    const fetchAttendance = async () => {
+      setLoadingAttendance(true);
+      try {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1; // 1-indexed
+        const records = await getUserAttendanceHistory(userData.uid, year, month);
+        const map = new Map<string, AttendanceRecord>();
+        records.forEach(r => map.set(r.date, r));
+        setAttendanceMap(map);
+      } catch (err) {
+        console.error('Error fetching attendance for calendar:', err);
+      } finally {
+        setLoadingAttendance(false);
+      }
+    };
+
+    fetchAttendance();
+  }, [userData?.uid, currentMonth]);
 
   const renderHeader = () => (
     <div className="cal-header">
@@ -58,6 +89,7 @@ const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ compact = false }) => {
       </button>
       <h3 className="cal-month-title">
         {format(currentMonth, 'MMMM yyyy')}
+        {loadingAttendance && <span className="cal-loading-dot" title="Loading attendance…"> ●</span>}
       </h3>
       <button className="cal-nav-btn" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
         ›
@@ -83,6 +115,7 @@ const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ compact = false }) => {
     const monthEnd = endOfMonth(monthStart);
     const calStart = startOfWeek(monthStart);
     const calEnd = endOfWeek(monthEnd);
+    const todayStart = startOfDay(new Date());
 
     const rows: React.ReactNode[] = [];
     let days: React.ReactNode[] = [];
@@ -95,21 +128,40 @@ const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ compact = false }) => {
         const holiday = holidayMap.get(dateStr);
         const weekend = isWeekend(day);
         const today = isToday(day);
+        const isPastDay = isBefore(startOfDay(day), todayStart);
+
+        // Attendance status for this day
+        const attendanceRecord = inMonth ? attendanceMap.get(dateStr) : undefined;
+        const isPresent = !!attendanceRecord;
+        // Absent = past weekday in this month, not a holiday, not a weekend, and no attendance record
+        const isAbsent = inMonth && isPastDay && !today && !weekend && !holiday && !isPresent;
 
         let cellClass = 'cal-cell';
         if (!inMonth) cellClass += ' cal-outside';
         if (weekend && inMonth) cellClass += ' cal-weekend';
         if (holiday && inMonth) cellClass += ' cal-holiday';
         if (today) cellClass += ' cal-today';
+        if (isPresent && inMonth) cellClass += ' cal-present';
+        if (isAbsent) cellClass += ' cal-absent';
+
+        let tooltipText = '';
+        if (holiday && inMonth) tooltipText = holiday;
+        else if (weekend && inMonth) tooltipText = 'Weekend';
+        if (isPresent && inMonth) tooltipText = tooltipText ? `${tooltipText} · Present` : 'Present';
+        else if (isAbsent) tooltipText = tooltipText ? `${tooltipText} · Absent` : 'Absent';
 
         days.push(
-          <div key={dateStr} className={cellClass} title={holiday || (weekend && inMonth ? 'Weekend' : '')}>
+          <div key={dateStr} className={cellClass} title={tooltipText}>
             <span className="cal-date-num">{format(day, 'd')}</span>
             {holiday && inMonth && !compact && (
               <span className="cal-holiday-name">{holiday}</span>
             )}
             {holiday && inMonth && compact && (
               <span className="cal-holiday-dot" title={holiday}>•</span>
+            )}
+            {/* Attendance indicator dot */}
+            {inMonth && !weekend && !holiday && isPastDay && !today && (
+              <span className={`cal-attend-dot ${isPresent ? 'present' : 'absent'}`} />
             )}
           </div>
         );
@@ -142,6 +194,12 @@ const LeaveCalendar: React.FC<LeaveCalendarProps> = ({ compact = false }) => {
         </span>
         <span className="cal-legend-item">
           <span className="cal-legend-dot today-dot"></span> Today
+        </span>
+        <span className="cal-legend-item">
+          <span className="cal-legend-dot present-dot"></span> Present
+        </span>
+        <span className="cal-legend-item">
+          <span className="cal-legend-dot absent-dot"></span> Absent
         </span>
       </div>
     </div>

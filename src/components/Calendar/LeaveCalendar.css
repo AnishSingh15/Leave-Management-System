@@ -62,7 +62,7 @@
 }
 
 .cal-day-label.weekend-label {
-  color: #dc2626;
+  color: #64748b;
 }
 
 /* Calendar body */
@@ -102,11 +102,11 @@
 
 /* Weekend */
 .cal-weekend {
-  background: #fef2f2;
+  background: #e5e7eb;
 }
 
 .cal-weekend .cal-date-num {
-  color: #dc2626;
+  color: #374151;
   font-weight: 600;
 }
 
@@ -149,6 +149,53 @@
   font-weight: 700;
 }
 
+/* Attendance: Present */
+.cal-present {
+  background: rgba(22, 163, 74, 0.08) !important;
+}
+
+.cal-present .cal-date-num {
+  color: #15803d;
+  font-weight: 600;
+}
+
+/* Attendance: Absent */
+.cal-absent .cal-date-num {
+  color: #dc2626;
+}
+
+/* Attendance dot indicators (small circle inside cell) */
+.cal-attend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 2px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.cal-attend-dot.present {
+  background: #16a34a;
+  box-shadow: 0 0 4px rgba(22, 163, 74, 0.5);
+}
+
+.cal-attend-dot.absent {
+  background: #dc2626;
+  box-shadow: 0 0 4px rgba(220, 38, 38, 0.4);
+}
+
+/* Loading dot in header */
+.cal-loading-dot {
+  font-size: 0.55rem;
+  color: #94a3b8;
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
 /* Legend */
 .cal-legend {
   display: flex;
@@ -174,8 +221,8 @@
 }
 
 .cal-legend-dot.weekend-dot {
-  background: #fecaca;
-  border: 1px solid #dc2626;
+  background: #e5e7eb;
+  border: 1px solid #9ca3af;
 }
 
 .cal-legend-dot.holiday-dot {
@@ -186,6 +233,18 @@
 .cal-legend-dot.today-dot {
   background: #bfdbfe;
   border: 2px solid #2563eb;
+}
+
+.cal-legend-dot.present-dot {
+  background: #16a34a;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(22, 163, 74, 0.5);
+}
+
+.cal-legend-dot.absent-dot {
+  background: #dc2626;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(220, 38, 38, 0.4);
 }
 
 /* Compact mode — for forms */

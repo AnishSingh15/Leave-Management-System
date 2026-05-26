@@ -68,7 +68,7 @@ export const submitLeaveRequest = async (
   const totalDays = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
 
   // Validate leave balance (skip for WFH, Saturday Work, Menstrual, and Bereavement)
-  if (['wfh', 'extra_work', 'menstrual', 'bereavement'].indexOf(formData.leaveType) === -1) {
+  if (['wfh', 'extra_work', 'menstrual'].indexOf(formData.leaveType) === -1) {
     const availableCompOff = formData.useCompOff ? employee.compOffBalance : 0;
     const availableAnnual = formData.useAnnualLeave ? employee.annualLeaveBalance : 0;
 
@@ -454,7 +454,7 @@ export const hrApproval = async (
         annualLeaveUsed = overrideAnnualLeave || 0;
         hrOverrideDetails = `HR Override: Comp Off = ${compOffUsed}, Annual Leave = ${annualLeaveUsed}`;
       } else {
-        if (['menstrual', 'bereavement'].indexOf(leaveData.leaveType) === -1) {
+        if (['menstrual'].indexOf(leaveData.leaveType) === -1) {
           if (leaveData.selectedSources.compOff && empData.compOffBalance > 0) {
             compOffUsed = Math.min(empData.compOffBalance, remainingDays);
             remainingDays -= compOffUsed;

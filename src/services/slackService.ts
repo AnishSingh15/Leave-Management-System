@@ -6,14 +6,13 @@ const SLACK_DM_ENDPOINT = '/api/slack-dm';     // DM via Bot Token (production)
 // Format leave type for display
 const formatLeaveType = (type: LeaveType): string => {
   const types: Record<LeaveType, string> = {
+    earned: 'Earned Leave',
     casual: 'Casual Leave',
     paid: 'Paid Leave',
-    sick: 'Sick Leave',
     comp_off: 'Comp Off',
     wfh: 'Work From Home',
     extra_work: 'Extra Day Work',
-    menstrual: "Menstrual Leave",
-    bereavement: 'Bereavement Leave'
+    menstrual: 'Menstrual Leave',
   };
   return types[type] || type;
 };

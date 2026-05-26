@@ -4,11 +4,10 @@ import { getAllUsers } from '../../services/userService';
 import { LeaveRequest, User } from '../../types';
 
 const LEAVE_COLUMNS = [
+  { key: 'earned', label: 'Earned' },
   { key: 'casual', label: 'Casual' },
-  { key: 'sick', label: 'Sick' },
   { key: 'wfh', label: 'WFH' },
   { key: 'menstrual', label: 'Menstrual' },
-  { key: 'bereavement', label: 'Bereavement' },
   { key: 'extra_work', label: 'Extra Work' },
   { key: 'comp_off', label: 'Comp Off' },
   { key: 'paid', label: 'Paid' },
