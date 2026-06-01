@@ -1,6 +1,7 @@
 // api/increment-annual-leave.js
-// Adds 2 annual leave days to every active employee at the start of each month.
-// Triggered by Vercel Cron (1st of every month at 12:00 AM IST = 6:30 PM UTC prev day)
+// Adds 2 annual leave days to every active employee on the 1st of each month (IST).
+// Triggered by Vercel Cron daily at 6:30 PM UTC (= 12:00 AM IST next day).
+// The handler checks if the current IST date is the 1st — skips otherwise.
 // Also callable manually from the Admin Panel with a CRON_SECRET Bearer token.
 //
 // Required Vercel Environment Variables:
@@ -20,6 +21,14 @@ function getAdminApp() {
   });
 }
 
+// Get current date in IST
+function getISTDate() {
+  // Create a date string in IST using Intl
+  var now = new Date();
+  var istStr = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+  return new Date(istStr);
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method !== 'GET' && req.method !== 'POST') {
@@ -33,8 +42,37 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    var body = req.body || {};
+    var force = req.query.force === 'true' || body.force === true;
+
+    // Only run on the 1st of the month (IST) unless forced
+    var istNow = getISTDate();
+    var istDay = istNow.getDate();
+    var istMonth = istNow.getMonth() + 1; // 1-based
+    var istYear = istNow.getFullYear();
+
+    if (!force && istDay !== 1) {
+      return res.status(200).json({
+        ok: true,
+        skipped: true,
+        message: 'Not the 1st of the month in IST (current IST date: ' + istDay + '). Skipping.',
+      });
+    }
+
     var app = getAdminApp();
     var db = admin.firestore(app);
+
+    // Idempotency check — prevent double-run for the same month
+    var runId = 'increment-' + istYear + '-' + String(istMonth).padStart(2, '0');
+    var runDoc = await db.collection('cronRuns').doc(runId).get();
+
+    if (runDoc.exists && !force) {
+      return res.status(200).json({
+        ok: true,
+        skipped: true,
+        message: 'Already ran for ' + runId + '. Skipping duplicate.',
+      });
+    }
 
     // Fetch all active users
     var snapshot = await db.collection('users').where('isActive', '==', true).get();
@@ -65,10 +103,16 @@ module.exports = async function handler(req, res) {
       });
     });
 
+    // Mark this month as done
+    batch.set(db.collection('cronRuns').doc(runId), {
+      ranAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedCount: updatedUsers.length,
+      force: force,
+    });
+
     await batch.commit();
 
-    var nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
-    console.log('[increment-annual-leave] Ran at ' + nowIST.toISOString() + ' IST. Updated ' + updatedUsers.length + ' users.');
+    console.log('[increment-annual-leave] Ran at ' + istNow.toISOString() + ' IST. Updated ' + updatedUsers.length + ' users.');
 
     return res.status(200).json({
       ok: true,

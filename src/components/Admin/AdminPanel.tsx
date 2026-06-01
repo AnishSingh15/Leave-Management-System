@@ -283,6 +283,7 @@ const AdminPanel: React.FC = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${cronSecret}`,
         },
+        body: JSON.stringify({ force: true }),
       });
       const data = await res.json();
       if (res.ok && data.ok) {
@@ -410,12 +411,14 @@ const AdminPanel: React.FC = () => {
         >
           Reimbursements
         </button>
+        {userData?.role === 'master_admin' && (
         <button
           className={`tab ${activeTab === 'audit' ? 'active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
           Audit Logs
         </button>
+        )}
       </div>
 
       <div className="card">
@@ -634,7 +637,7 @@ const AdminPanel: React.FC = () => {
             )}
 
             {/* Audit Logs Tab */}
-            {activeTab === 'audit' && (
+            {activeTab === 'audit' && userData?.role === 'master_admin' && (
               <div className="table-container">
                 <table className="data-table">
                   <thead>

@@ -42,8 +42,8 @@ const convertLeaveDoc = (doc: any): LeaveRequest => {
 
 // Calculate total leave days between two dates
 export const calculateLeaveDays = (startDate: string, endDate: string, isHalfDay: boolean): number => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
   let days = 0;
 
   const current = new Date(start);
@@ -117,8 +117,8 @@ export const submitLeaveRequest = async (
     employeeName: employee.name,
     employeeEmail: employee.email,
     leaveType: formData.leaveType,
-    startDate: new Date(formData.startDate),
-    endDate: new Date(formData.endDate),
+    startDate: new Date(formData.startDate + 'T00:00:00'),
+    endDate: new Date(formData.endDate + 'T00:00:00'),
     totalDays,
     isHalfDay: formData.isHalfDay,
     reason: formData.reason,

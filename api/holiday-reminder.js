@@ -92,11 +92,17 @@ module.exports = async function handler(req, res) {
     var force = req.query.force === 'true' || body.force === true;
     var testEmail = req.query.testEmail || body.testEmail || null;
 
-    // Tomorrow in IST
-    var nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
-    var tomorrow = new Date(nowIST);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    var tomorrowStr = tomorrow.toISOString().split('T')[0];
+    // Tomorrow in IST — use Intl for reliable IST date
+    var nowUtc = new Date();
+    // Get today's date parts in IST
+    var istFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
+    var todayIST = istFormatter.format(nowUtc); // 'YYYY-MM-DD'
+    var todayParts = todayIST.split('-');
+    var tomorrowDate = new Date(Number(todayParts[0]), Number(todayParts[1]) - 1, Number(todayParts[2]));
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    var tomorrowStr = tomorrowDate.getFullYear() + '-' +
+      String(tomorrowDate.getMonth() + 1).padStart(2, '0') + '-' +
+      String(tomorrowDate.getDate()).padStart(2, '0');
 
     var holiday = NATIONAL_HOLIDAYS.find(function (h) { return h.date === tomorrowStr; });
 
