@@ -79,7 +79,7 @@ const LeaveSummary: React.FC = () => {
   ALL_COLUMNS.forEach((col) => {
     colTotals[col.key] = summary.reduce((sum, row) => sum + (row.counts[col.key] || 0), 0);
   });
-  const grandTotal = summary.reduce((sum, row) => sum + row.total, 0);
+
 
   const thStyle: React.CSSProperties = { textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px', fontSize: '0.85rem' };
   const tdStyle: React.CSSProperties = { textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px' };
