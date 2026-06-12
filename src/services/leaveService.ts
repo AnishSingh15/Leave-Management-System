@@ -15,6 +15,14 @@ import { db } from '../config/firebase';
 import { LeaveRequest, LeaveFormData, LeaveStatus, User } from '../types';
 import { sendSlackNotification } from './slackService';
 
+// Format a Date to 'YYYY-MM-DD' in local timezone (avoids UTC shift)
+const toLocalDateStr = (d: Date): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Helper: get Slack Member IDs for all HR admins
 const getHRSlackIds = async (): Promise<string[]> => {
   const q = query(
@@ -367,8 +375,8 @@ export const managerDecision = async (
         await sendSlackNotification({
           employeeName: leaveData.employeeName,
           leaveType: leaveData.leaveType,
-          startDate: leaveData.startDate.toISOString().split('T')[0],
-          endDate: leaveData.endDate.toISOString().split('T')[0],
+          startDate: toLocalDateStr(leaveData.startDate),
+          endDate: toLocalDateStr(leaveData.endDate),
           totalDays: leaveData.totalDays,
           status: newStatus,
           managerName,
@@ -384,8 +392,8 @@ export const managerDecision = async (
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
+        startDate: toLocalDateStr(leaveData.startDate),
+        endDate: toLocalDateStr(leaveData.endDate),
         totalDays: leaveData.totalDays,
         status: newStatus,
         managerName,
@@ -401,8 +409,8 @@ export const managerDecision = async (
         await sendSlackNotification({
           employeeName: leaveData.employeeName,
           leaveType: leaveData.leaveType,
-          startDate: leaveData.startDate.toISOString().split('T')[0],
-          endDate: leaveData.endDate.toISOString().split('T')[0],
+          startDate: toLocalDateStr(leaveData.startDate),
+          endDate: toLocalDateStr(leaveData.endDate),
           totalDays: leaveData.totalDays,
           status: newStatus,
           managerName,
@@ -418,8 +426,8 @@ export const managerDecision = async (
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
+        startDate: toLocalDateStr(leaveData.startDate),
+        endDate: toLocalDateStr(leaveData.endDate),
         totalDays: leaveData.totalDays,
         status: newStatus,
         managerName,
@@ -550,8 +558,8 @@ export const hrApproval = async (
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
+        startDate: toLocalDateStr(leaveData.startDate),
+        endDate: toLocalDateStr(leaveData.endDate),
         totalDays: leaveData.totalDays,
         status: 'rejected',
         hrComment: comment,
@@ -562,8 +570,8 @@ export const hrApproval = async (
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
+        startDate: toLocalDateStr(leaveData.startDate),
+        endDate: toLocalDateStr(leaveData.endDate),
         totalDays: leaveData.totalDays,
         status: 'approved',
         hrComment: comment,
@@ -574,8 +582,8 @@ export const hrApproval = async (
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
+        startDate: toLocalDateStr(leaveData.startDate),
+        endDate: toLocalDateStr(leaveData.endDate),
         totalDays: leaveData.totalDays,
         status: 'approved',
         hrComment: comment,
@@ -587,8 +595,8 @@ export const hrApproval = async (
       await sendSlackNotification({
         employeeName: leaveData.employeeName,
         leaveType: leaveData.leaveType,
-        startDate: leaveData.startDate.toISOString().split('T')[0],
-        endDate: leaveData.endDate.toISOString().split('T')[0],
+        startDate: toLocalDateStr(leaveData.startDate),
+        endDate: toLocalDateStr(leaveData.endDate),
         totalDays: leaveData.totalDays,
         status: 'approved',
         hrComment: comment,
