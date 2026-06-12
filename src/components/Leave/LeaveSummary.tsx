@@ -3,21 +3,25 @@ import { getAllLeaves } from '../../services/leaveService';
 import { getAllUsers } from '../../services/userService';
 import { LeaveRequest, User } from '../../types';
 
-const LEAVE_COLUMNS = [
-  { key: 'earned', label: 'Earned' },
+const LEFT_COLUMNS = [
   { key: 'casual', label: 'Casual' },
+  { key: 'earned', label: 'Earned' },
   { key: 'wfh', label: 'WFH' },
-  { key: 'menstrual', label: 'Menstrual' },
-  { key: 'extra_work', label: 'Extra Work' },
   { key: 'comp_off', label: 'Comp Off' },
-  { key: 'paid', label: 'Paid' },
+  { key: 'menstrual', label: 'Menstrual' },
 ];
+
+const RIGHT_COLUMNS = [
+  { key: 'extra_work', label: 'Extra Work' },
+];
+
+const ALL_COLUMNS = [...LEFT_COLUMNS, ...RIGHT_COLUMNS];
 
 const LeaveSummary: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
   const [summary, setSummary] = useState<
-    { user: User; counts: Record<string, number> }[]
+    { user: User; counts: Record<string, number>; total: number }[]
   >([]);
 
   useEffect(() => {
@@ -46,13 +50,15 @@ const LeaveSummary: React.FC = () => {
             (l) => l.employeeId === user.uid
           );
           const counts: Record<string, number> = {};
-          LEAVE_COLUMNS.forEach((col) => {
+          let total = 0;
+          ALL_COLUMNS.forEach((col) => {
             const days = userLeaves
               .filter((l) => l.leaveType === col.key)
               .reduce((sum, l) => sum + l.totalDays, 0);
             counts[col.key] = days;
+            total += days;
           });
-          return { user, counts };
+          return { user, counts, total };
         });
 
         setSummary(rows);
@@ -67,6 +73,18 @@ const LeaveSummary: React.FC = () => {
   }, [year]);
 
   const currentYear = new Date().getFullYear();
+
+  // Compute column totals
+  const colTotals: Record<string, number> = {};
+  ALL_COLUMNS.forEach((col) => {
+    colTotals[col.key] = summary.reduce((sum, row) => sum + (row.counts[col.key] || 0), 0);
+  });
+  const grandTotal = summary.reduce((sum, row) => sum + row.total, 0);
+
+  const thStyle: React.CSSProperties = { textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px', fontSize: '0.85rem' };
+  const tdStyle: React.CSSProperties = { textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px' };
+  const separatorTh: React.CSSProperties = { ...thStyle, borderLeft: '3px solid #94a3b8' };
+  const separatorTd: React.CSSProperties = { ...tdStyle, borderLeft: '3px solid #94a3b8' };
 
   return (
     <div className="attendance-report">
@@ -113,12 +131,20 @@ const LeaveSummary: React.FC = () => {
               <table className="data-table" style={{ borderCollapse: 'collapse', width: '100%' }}>
                 <thead>
                   <tr>
-                    <th style={{ border: '1px solid #cbd5e1', padding: '10px' }}>Employee</th>
-                    {LEAVE_COLUMNS.map((col) => (
-                      <th key={col.key} style={{ textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px' }}>
+                    <th style={{ border: '1px solid #cbd5e1', padding: '10px', textAlign: 'left' }}>Employee</th>
+                    {LEFT_COLUMNS.map((col) => (
+                      <th key={col.key} style={thStyle}>
                         {col.label}
                       </th>
                     ))}
+                    {RIGHT_COLUMNS.map((col) => (
+                      <th key={col.key} style={separatorTh}>
+                        {col.label}
+                      </th>
+                    ))}
+                    <th style={{ ...separatorTh, background: '#f1f5f9', fontWeight: 700 }}>
+                      Total
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -127,14 +153,23 @@ const LeaveSummary: React.FC = () => {
                       <td style={{ border: '1px solid #cbd5e1', padding: '10px' }}>
                         <strong>{row.user.name}</strong>
                       </td>
-                      {LEAVE_COLUMNS.map((col) => (
-                        <td key={col.key} style={{ textAlign: 'center', border: '1px solid #cbd5e1', padding: '10px' }}>
+                      {LEFT_COLUMNS.map((col) => (
+                        <td key={col.key} style={tdStyle}>
                           {row.counts[col.key] || ''}
                         </td>
                       ))}
+                      {RIGHT_COLUMNS.map((col) => (
+                        <td key={col.key} style={separatorTd}>
+                          {row.counts[col.key] || ''}
+                        </td>
+                      ))}
+                      <td style={{ ...separatorTd, fontWeight: 700, background: '#f8fafc' }}>
+                        {row.total || ''}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </div>
           )}

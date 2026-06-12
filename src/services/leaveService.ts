@@ -59,6 +59,41 @@ export const calculateLeaveDays = (startDate: string, endDate: string, isHalfDay
   return isHalfDay ? 0.5 : days;
 };
 
+// Max comp off days that can be used per month
+export const MAX_COMP_OFF_PER_MONTH = 2;
+
+// Get how many comp off days an employee has already used (or requested) in a given month
+export const getCompOffUsedInMonth = async (employeeId: string, monthDate: string): Promise<number> => {
+  const date = new Date(monthDate + 'T00:00:00');
+  const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
+
+  const q = query(
+    collection(db, 'leaves'),
+    where('employeeId', '==', employeeId)
+  );
+  const snapshot = await getDocs(q);
+
+  let used = 0;
+  snapshot.docs.forEach(d => {
+    const data = d.data();
+    const status = data.status;
+    // Count approved leaves that used comp off, and pending leaves that requested comp off
+    if (!['approved', 'pending_manager', 'pending_hr'].includes(status)) return;
+    const start = data.startDate?.toDate ? data.startDate.toDate() : new Date(data.startDate);
+    if (start < startOfMonth || start > endOfMonth) return;
+
+    if (status === 'approved' && data.compOffUsed > 0) {
+      used += data.compOffUsed;
+    } else if (['pending_manager', 'pending_hr'].includes(status) && data.selectedSources?.compOff) {
+      // For pending, estimate comp off that would be used (min of balance, totalDays)
+      used += Math.min(data.totalDays || 0, MAX_COMP_OFF_PER_MONTH);
+    }
+  });
+
+  return used;
+};
+
 // Submit a new leave request
 export const submitLeaveRequest = async (
   formData: LeaveFormData,
@@ -67,13 +102,27 @@ export const submitLeaveRequest = async (
 ): Promise<string> => {
   const totalDays = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
 
-  // Validate leave balance (skip for WFH, Saturday Work, Menstrual, and Bereavement)
+  // Validate leave balance (skip for WFH, Saturday Work, Menstrual)
   if (['wfh', 'extra_work', 'menstrual'].indexOf(formData.leaveType) === -1) {
     const availableCompOff = formData.useCompOff ? employee.compOffBalance : 0;
     const availableAnnual = formData.useAnnualLeave ? employee.annualLeaveBalance : 0;
 
     if (availableCompOff + availableAnnual < totalDays) {
       throw new Error('Insufficient leave balance for the selected leave sources');
+    }
+
+    // Enforce max 2 comp off days per month
+    if (formData.useCompOff) {
+      const compOffAlreadyUsed = await getCompOffUsedInMonth(employee.uid, formData.startDate);
+      const compOffWanted = Math.min(employee.compOffBalance, totalDays);
+      if (compOffAlreadyUsed + compOffWanted > MAX_COMP_OFF_PER_MONTH) {
+        const remaining = Math.max(0, MAX_COMP_OFF_PER_MONTH - compOffAlreadyUsed);
+        throw new Error(
+          `You can only use ${MAX_COMP_OFF_PER_MONTH} comp off days per month. ` +
+          `You have already used/requested ${compOffAlreadyUsed} this month. ` +
+          `Remaining comp off allowance: ${remaining} day(s).`
+        );
+      }
     }
   }
 
@@ -456,7 +505,7 @@ export const hrApproval = async (
       } else {
         if (['menstrual'].indexOf(leaveData.leaveType) === -1) {
           if (leaveData.selectedSources.compOff && empData.compOffBalance > 0) {
-            compOffUsed = Math.min(empData.compOffBalance, remainingDays);
+            compOffUsed = Math.min(empData.compOffBalance, remainingDays, MAX_COMP_OFF_PER_MONTH);
             remainingDays -= compOffUsed;
           }
 

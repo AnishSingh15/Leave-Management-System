@@ -292,7 +292,7 @@ const LeaveForm: React.FC = () => {
           {!noDeduction && (
             <div className="form-group">
               <label>Leave Source *</label>
-              <p className="help-text">Select which balance to deduct from</p>
+              <p className="help-text">Select which balance to deduct from (max 2 comp off per month)</p>
               <div className="checkbox-group">
                 <div className={`checkbox-item ${compOffDisabled ? 'disabled' : ''}`}>
                   <input
