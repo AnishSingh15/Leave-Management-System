@@ -31,15 +31,13 @@ export const NATIONAL_HOLIDAYS: { date: string; name: string }[] = [
   { date: '2026-04-03', name: 'Good Friday' },
   { date: '2026-05-01', name: 'Labour Day' },
 
-  { date: '2026-06-26', name: 'Last day of Muharram' },
-  { date: '2026-08-26', name: 'Eid-Milad' },
   { date: '2026-09-14', name: 'Ganesh Chaturthi' },
   { date: '2026-10-02', name: 'Gandhi Jayanthi' },
+  { date: '2026-10-19', name: 'Dussehra' },
   { date: '2026-10-20', name: 'Ayudha Pooja' },
   { date: '2026-10-21', name: 'Vijayadashami' },
   { date: '2026-11-09', name: 'Deepavali' },
   { date: '2026-11-10', name: 'Deepavali' },
-  { date: '2026-12-24', name: 'Christmas Eve' },
   { date: '2026-12-25', name: 'Christmas' },
 ];
 
