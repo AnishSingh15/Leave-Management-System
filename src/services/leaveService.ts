@@ -14,6 +14,7 @@ import {
 import { db } from '../config/firebase';
 import { LeaveRequest, LeaveFormData, LeaveStatus, User } from '../types';
 import { sendSlackNotification } from './slackService';
+import { NATIONAL_HOLIDAYS } from '../components/Calendar/LeaveCalendar';
 
 // Format a Date to 'YYYY-MM-DD' in local timezone (avoids UTC shift)
 const toLocalDateStr = (d: Date): string => {
@@ -48,18 +49,26 @@ const convertLeaveDoc = (doc: any): LeaveRequest => {
   } as LeaveRequest;
 };
 
-// Calculate total leave days between two dates
-export const calculateLeaveDays = (startDate: string, endDate: string, isHalfDay: boolean): number => {
+// Calculate total leave days between two dates (excludes weekends and holidays)
+// Set includeWeekends=true for extra work (which happens on weekends/holidays)
+export const calculateLeaveDays = (startDate: string, endDate: string, isHalfDay: boolean, holidays: string[] = [], includeWeekends: boolean = false): number => {
   const start = new Date(startDate + 'T00:00:00');
   const end = new Date(endDate + 'T00:00:00');
   let days = 0;
 
+  const holidaySet = new Set(holidays);
   const current = new Date(start);
   while (current <= end) {
     const dayOfWeek = current.getDay();
-    // Exclude weekends
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+    const dateStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+    if (includeWeekends) {
+      // Count all calendar days (for extra work)
       days++;
+    } else {
+      // Exclude weekends and holidays
+      if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidaySet.has(dateStr)) {
+        days++;
+      }
     }
     current.setDate(current.getDate() + 1);
   }
@@ -108,7 +117,11 @@ export const submitLeaveRequest = async (
   employee: User,
   manager: User
 ): Promise<string> => {
-  const totalDays = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
+  const holidayDates = NATIONAL_HOLIDAYS.map(h => h.date);
+  const isExtraWork = formData.leaveType === 'extra_work';
+  const totalDays = isExtraWork
+    ? calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay, [], true)
+    : calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay, holidayDates);
 
   // Validate leave balance (skip for WFH, Saturday Work, Menstrual)
   if (['wfh', 'extra_work', 'menstrual'].indexOf(formData.leaveType) === -1) {

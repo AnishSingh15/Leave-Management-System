@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { submitLeaveRequest, calculateLeaveDays } from '../../services/leaveService';
 import { getManagers, getUserById } from '../../services/userService';
 import { LeaveFormData, User } from '../../types';
-import LeaveCalendar from '../Calendar/LeaveCalendar';
+import LeaveCalendar, { NATIONAL_HOLIDAYS } from '../Calendar/LeaveCalendar';
 import './LeaveForm.css';
 
 const LeaveForm: React.FC = () => {
@@ -64,14 +64,19 @@ const LeaveForm: React.FC = () => {
   }, [formData.leaveType, formData.startDate]);
 
   // Calculate total days when dates change
+  const holidayDates = React.useMemo(() => NATIONAL_HOLIDAYS.map(h => h.date), []);
   useEffect(() => {
     if (formData.startDate && formData.endDate) {
-      const days = calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay);
+      // Extra work is done on weekends/holidays, so count ALL calendar days
+      const isExtraWork = formData.leaveType === 'extra_work';
+      const days = isExtraWork
+        ? calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay, [], true)
+        : calculateLeaveDays(formData.startDate, formData.endDate, formData.isHalfDay, holidayDates);
       setTotalDays(days);
     } else {
       setTotalDays(0);
     }
-  }, [formData.startDate, formData.endDate, formData.isHalfDay]);
+  }, [formData.startDate, formData.endDate, formData.isHalfDay, formData.leaveType, holidayDates]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -286,6 +291,15 @@ const LeaveForm: React.FC = () => {
               <div className="total-days-display">
                 {isMenstrual ? '1 day' : `${totalDays} ${totalDays === 1 ? 'day' : 'days'}`}
               </div>
+              {!isMenstrual && formData.startDate && formData.endDate && formData.leaveType === 'extra_work' && (
+                <p className="help-text">All calendar days are counted for extra work.</p>
+              )}
+              {!isMenstrual && formData.leaveType !== 'extra_work' && formData.startDate && formData.endDate && totalDays === 0 && (
+                <p className="help-text" style={{ color: '#e53e3e' }}>Selected dates fall on weekends or holidays — no working days.</p>
+              )}
+              {!isMenstrual && formData.leaveType !== 'extra_work' && formData.startDate && formData.endDate && totalDays > 0 && (
+                <p className="help-text">Weekends and holidays are excluded automatically.</p>
+              )}
             </div>
           </div>
 
