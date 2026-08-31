@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     submitReimbursement,
-    convertImageToBase64,
+    uploadBillImage,
     getEmployeeReimbursements,
 } from '../../services/reimbursementService';
 import { getManagers } from '../../services/userService';
@@ -137,14 +137,14 @@ const Reimbursement: React.FC = () => {
 
         setSubmitting(true);
         try {
-            // Convert all bill images to base64
+            // Upload all bill images to Firebase Storage
             const reimbursementItems: ReimbursementItem[] = [];
 
             for (const item of items) {
                 const billUrls: string[] = [];
                 for (const file of item.files) {
-                    const base64 = await convertImageToBase64(file);
-                    billUrls.push(base64);
+                    const url = await uploadBillImage(file, userData.uid);
+                    billUrls.push(url);
                 }
                 reimbursementItems.push({
                     name: item.name.trim(),

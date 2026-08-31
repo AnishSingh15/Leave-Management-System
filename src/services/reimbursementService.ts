@@ -9,7 +9,8 @@ import {
     where,
     serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../config/firebase';
 import { ReimbursementRequest, ReimbursementItem, User } from '../types';
 
 // Convert Firestore document to ReimbursementRequest
@@ -32,7 +33,16 @@ const convertReimbursementDoc = (docSnap: any): ReimbursementRequest => {
     };
 };
 
-// Convert image file to base64 data URL (free alternative to Firebase Storage)
+// Upload bill image to Firebase Storage and return the download URL
+export const uploadBillImage = async (file: File, userId: string): Promise<string> => {
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storageRef = ref(storage, `reimbursements/${userId}/${timestamp}_${safeName}`);
+    await uploadBytes(storageRef, file);
+    return getDownloadURL(storageRef);
+};
+
+// Legacy: Convert image file to base64 data URL (kept for backward compat)
 export const convertImageToBase64 = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
