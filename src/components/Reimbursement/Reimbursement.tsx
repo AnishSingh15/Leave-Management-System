@@ -137,13 +137,16 @@ const Reimbursement: React.FC = () => {
 
         setSubmitting(true);
         try {
-            // Compress all bill images to lightweight base64 JPEG
+            // Count total files across all items to budget image sizes within Firestore's 1MB limit
+            const totalFiles = items.reduce((sum, item) => sum + item.files.length, 0);
+            const targetBytesPerImage = Math.max(25000, Math.floor(700000 / Math.max(1, totalFiles)));
+
             const reimbursementItems: ReimbursementItem[] = [];
 
             for (const item of items) {
                 const billUrls: string[] = [];
                 for (const file of item.files) {
-                    const base64 = await compressAndConvertToBase64(file);
+                    const base64 = await compressAndConvertToBase64(file, targetBytesPerImage);
                     billUrls.push(base64);
                 }
                 reimbursementItems.push({
@@ -151,6 +154,14 @@ const Reimbursement: React.FC = () => {
                     amount: parseFloat(item.amount),
                     billUrls,
                 });
+            }
+
+            // Check payload size
+            const payloadSize = JSON.stringify(reimbursementItems).length;
+            if (payloadSize > 950000) {
+                throw new Error(
+                    `Total bill attachments are too large (${Math.round(payloadSize / 1024)} KB). Firestore limit is 1MB. Please split into multiple reimbursement requests.`
+                );
             }
 
             await submitReimbursement(userData, reimbursementItems, managerId, selectedManager.name);

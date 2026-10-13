@@ -32,49 +32,88 @@ const convertReimbursementDoc = (docSnap: any): ReimbursementRequest => {
     };
 };
 
-// Compress and convert image file to optimized base64 JPEG
+// Compress and convert image file to optimized base64 JPEG with adaptive budget
 export const compressAndConvertToBase64 = async (
     file: File,
-    maxWidth: number = 800,
-    maxHeight: number = 800,
-    quality: number = 0.6
+    targetMaxChars: number = 70000
 ): Promise<string> => {
     return new Promise((resolve, reject) => {
+        // If file is not an image (e.g. PDF)
+        if (!file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = reader.result as string;
+                if (result.length > targetMaxChars) {
+                    reject(new Error(`File "${file.name}" is not an image and exceeds size limit. Please upload JPG or PNG receipts.`));
+                } else {
+                    resolve(result);
+                }
+            };
+            reader.onerror = () => reject(new Error(`Failed to read file ${file.name}`));
+            reader.readAsDataURL(file);
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
             const img = new Image();
             img.onload = () => {
-                let width = img.width;
-                let height = img.height;
+                const attemptCompression = (wMax: number, hMax: number, q: number): string => {
+                    let width = img.width;
+                    let height = img.height;
 
-                if (width > height) {
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
+                    if (width > height) {
+                        if (width > wMax) {
+                            height = Math.round((height * wMax) / width);
+                            width = wMax;
+                        }
+                    } else {
+                        if (height > hMax) {
+                            width = Math.round((width * hMax) / height);
+                            height = hMax;
+                        }
                     }
-                } else {
-                    if (height > maxHeight) {
-                        width = Math.round((width * maxHeight) / height);
-                        height = maxHeight;
-                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, width);
+                    canvas.height = Math.max(1, height);
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return dataUrl;
+
+                    // Fill white background in case image has transparency (PNG to JPEG)
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    return canvas.toDataURL('image/jpeg', q);
+                };
+
+                // Progressive steps from standard down to compact
+                const steps = [
+                    { w: 700, h: 700, q: 0.6 },
+                    { w: 600, h: 600, q: 0.5 },
+                    { w: 500, h: 500, q: 0.4 },
+                    { w: 400, h: 400, q: 0.35 },
+                ];
+
+                let compressed = attemptCompression(steps[0].w, steps[0].h, steps[0].q);
+
+                for (let i = 1; i < steps.length && compressed.length > targetMaxChars; i++) {
+                    compressed = attemptCompression(steps[i].w, steps[i].h, steps[i].q);
                 }
 
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    resolve(e.target?.result as string);
-                    return;
-                }
-                ctx.drawImage(img, 0, 0, width, height);
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                resolve(compressedDataUrl);
+                resolve(compressed);
             };
-            img.onerror = () => resolve(e.target?.result as string);
-            img.src = e.target?.result as string;
+            img.onerror = () => {
+                if (dataUrl.length > targetMaxChars) {
+                    reject(new Error(`Image "${file.name}" format is unsupported and too large. Please upload as standard JPG or PNG.`));
+                } else {
+                    resolve(dataUrl);
+                }
+            };
+            img.src = dataUrl;
         };
-        reader.onerror = reject;
+        reader.onerror = () => reject(new Error(`Failed to read file ${file.name}`));
         reader.readAsDataURL(file);
     });
 };
