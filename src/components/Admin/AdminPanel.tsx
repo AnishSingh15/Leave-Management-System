@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllUsers, adjustCompOffBalance, adjustAnnualLeaveBalance, updateUserRole, toggleUserStatus, getAuditLogs, updateSlackMemberId } from '../../services/userService';
 import { getAllLeaves, cancelLeaveRequest } from '../../services/leaveService';
-import { getAllReimbursements } from '../../services/reimbursementService';
+import { getAllReimbursements, downloadBillImage, downloadAllBills } from '../../services/reimbursementService';
 import { User, UserRole, LeaveRequest, AuditLog, ReimbursementRequest } from '../../types';
 import { format } from 'date-fns';
 import './AdminPanel.css';
@@ -618,6 +618,28 @@ const AdminPanel: React.FC = () => {
                               </div>
                             </div>
                           ))}
+                          {req.items?.some(i => i.billUrls?.length > 0) && (
+                            <button
+                              type="button"
+                              onClick={() => downloadAllBills(req)}
+                              title="Download all bills for this request"
+                              style={{
+                                marginTop: '6px',
+                                background: '#f3f4f6',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '4px',
+                                padding: '2px 8px',
+                                fontSize: '0.75rem',
+                                color: '#374151',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              ⬇ Download All ({req.items.reduce((s, i) => s + (i.billUrls?.length || 0), 0)})
+                            </button>
+                          )}
                         </td>
                         <td><strong>₹{req.totalAmount.toFixed(2)}</strong></td>
                         <td>{req.managerName}</td>
@@ -872,6 +894,24 @@ const AdminPanel: React.FC = () => {
                 borderRadius: '8px'
               }}
             />
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => downloadBillImage(viewImage, 'receipt.jpg')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 18px',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                ⬇ Download Receipt
+              </button>
+            </div>
           </div>
         </div>
       )}

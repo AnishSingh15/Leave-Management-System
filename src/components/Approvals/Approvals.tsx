@@ -23,7 +23,9 @@ import {
   hrApproveReimbursement,
   hrRejectReimbursement,
   getManagerReimbursementHistory,
-  getHRReimbursementHistory
+  getHRReimbursementHistory,
+  downloadBillImage,
+  downloadAllBills
 } from '../../services/reimbursementService';
 import { getAllUsers } from '../../services/userService';
 import { LeaveRequest, MissedClockInRequest, ReimbursementRequest } from '../../types';
@@ -523,6 +525,27 @@ const Approvals: React.FC = () => {
                   </span>
                   <div className="btn-group">
                     <button
+                      type="button"
+                      className="btn"
+                      onClick={() => downloadAllBills(req)}
+                      title="Download all attached receipts"
+                      style={{
+                        backgroundColor: '#f3f4f6',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        padding: '8px 14px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      ⬇ Download Bills
+                    </button>
+                    <button
                       className="btn btn-danger"
                       onClick={() => openReimbModal(req, 'reject')}
                       disabled={processingId === req.id}
@@ -679,6 +702,26 @@ const Approvals: React.FC = () => {
                     </div>
                     <div className="approval-footer">
                       <span>Updated: {format(new Date(req.updatedAt || req.createdAt), 'MMM dd, yyyy')}</span>
+                      <button
+                        type="button"
+                        onClick={() => downloadAllBills(req)}
+                        title="Download all attached receipts"
+                        style={{
+                          backgroundColor: '#f3f4f6',
+                          color: '#374151',
+                          border: '1px solid #d1d5db',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: 500,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        ⬇ Download Bills
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -811,14 +854,22 @@ const Approvals: React.FC = () => {
               }}
             />
             <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-              <a
-                href={viewImage}
-                download="receipt.png"
+              <button
+                type="button"
                 className="btn btn-primary"
-                style={{ textDecoration: 'none', display: 'inline-block' }}
+                onClick={() => downloadBillImage(viewImage, 'receipt.jpg')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 18px',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
               >
                 ⬇ Download Receipt
-              </a>
+              </button>
             </div>
           </div>
         </div>

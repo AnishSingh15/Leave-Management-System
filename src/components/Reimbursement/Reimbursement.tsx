@@ -4,6 +4,8 @@ import {
     submitReimbursement,
     compressAndConvertToBase64,
     getEmployeeReimbursements,
+    downloadBillImage,
+    downloadAllBills,
 } from '../../services/reimbursementService';
 import { getManagers } from '../../services/userService';
 import { ReimbursementItem, ReimbursementRequest, User } from '../../types';
@@ -411,6 +413,28 @@ const Reimbursement: React.FC = () => {
                                         <strong>HR Comment:</strong> {req.hrComment}
                                     </div>
                                 )}
+                                {req.items?.some(i => i.billUrls?.length > 0) && (
+                                    <div style={{ marginTop: '10px', textAlign: 'right' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadAllBills(req)}
+                                            style={{
+                                                background: '#f3f4f6',
+                                                border: '1px solid #d1d5db',
+                                                borderRadius: '6px',
+                                                padding: '5px 12px',
+                                                fontSize: '0.8rem',
+                                                color: '#374151',
+                                                cursor: 'pointer',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                        >
+                                            ⬇ Download All Receipts
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -424,14 +448,22 @@ const Reimbursement: React.FC = () => {
                         <button className="image-modal-close" onClick={() => setViewImage(null)}>✕</button>
                         <img src={viewImage} alt="Bill" />
                         <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                            <a
-                                href={viewImage}
-                                download="receipt.png"
+                            <button
+                                type="button"
                                 className="btn btn-primary"
-                                style={{ textDecoration: 'none', display: 'inline-block' }}
+                                onClick={() => downloadBillImage(viewImage, 'receipt.jpg')}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '8px 18px',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                }}
                             >
                                 ⬇ Download Receipt
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>

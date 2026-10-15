@@ -121,6 +121,85 @@ export const compressAndConvertToBase64 = async (
 // Convert image file to base64 data URL
 export const convertImageToBase64 = compressAndConvertToBase64;
 
+// Download a bill image (robust for base64 data URLs, blob URLs, and external URLs)
+export const downloadBillImage = (url: string, filename: string = 'bill_receipt.jpg') => {
+    if (!url) return;
+    try {
+        if (url.startsWith('data:')) {
+            // Convert data URL to Blob for reliable browser download without Chrome blocking
+            const parts = url.split(',');
+            const mimeMatch = parts[0].match(/:(.*?);/);
+            const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const ext = mimeType.includes('png') ? '.png' : mimeType.includes('pdf') ? '.pdf' : '.jpg';
+            const cleanFilename = filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.pdf')
+                ? filename
+                : `${filename}${ext}`;
+
+            const byteCharacters = atob(parts[1]);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+            const blobUrl = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = cleanFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+            return;
+        }
+
+        // For HTTP / HTTPS URLs (e.g. Firebase storage URLs)
+        fetch(url)
+            .then((res) => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                return res.blob();
+            })
+            .then((blob) => {
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+            })
+            .catch(() => {
+                window.open(url, '_blank');
+            });
+    } catch (err) {
+        console.error('Error downloading bill image:', err);
+        const win = window.open();
+        if (win) {
+            win.document.write(`<img src="${url}" style="max-width:100%" alt="Receipt"/>`);
+        }
+    }
+};
+
+// Download all bills for a reimbursement request
+export const downloadAllBills = (req: ReimbursementRequest) => {
+    let count = 0;
+    (req.items || []).forEach((item, itemIdx) => {
+        (item.billUrls || []).forEach((url, billIdx) => {
+            const safeEmp = (req.employeeName || 'employee').replace(/[^a-zA-Z0-9_-]/g, '_');
+            const safeItem = (item.name || `item${itemIdx + 1}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const filename = `${safeEmp}_${safeItem}_bill${billIdx + 1}.jpg`;
+            setTimeout(() => {
+                downloadBillImage(url, filename);
+            }, count * 350);
+            count++;
+        });
+    });
+};
+
 // Submit a reimbursement request
 export const submitReimbursement = async (
     user: User,
